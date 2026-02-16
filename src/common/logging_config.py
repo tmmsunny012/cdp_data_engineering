@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import uuid
+from collections.abc import Mapping, MutableMapping
 from contextvars import ContextVar
 from typing import Any
 
@@ -70,8 +71,8 @@ _REDACTED = "[REDACTED]"
 def _redact_pii(
     logger: Any,
     method_name: str,
-    event_dict: dict[str, Any],
-) -> dict[str, Any]:
+    event_dict: MutableMapping[str, Any],
+) -> Mapping[str, Any]:
     """Structlog processor that replaces PII values with ``[REDACTED]``."""
     for key, value in list(event_dict.items()):
         if not isinstance(value, str):
@@ -92,8 +93,8 @@ def _redact_pii(
 def _inject_context(
     logger: Any,
     method_name: str,
-    event_dict: dict[str, Any],
-) -> dict[str, Any]:
+    event_dict: MutableMapping[str, Any],
+) -> Mapping[str, Any]:
     """Add correlation_id, service_name, and environment to every event."""
     event_dict.setdefault("correlation_id", get_correlation_id())
     event_dict.setdefault("service", _service_name_ctx.get("unknown"))
@@ -131,8 +132,8 @@ def setup_logging(service_name: str, log_level: str = "INFO") -> structlog.stdli
             structlog.contextvars.merge_contextvars,
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            _inject_context,  # type: ignore[arg-type]
-            _redact_pii,  # type: ignore[arg-type]
+            _inject_context,
+            _redact_pii,
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),
         ],

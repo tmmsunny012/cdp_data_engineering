@@ -164,7 +164,7 @@ class GDPRDeletionEngine:
 
         client: bigquery.Client = self._bq
         for table in BQ_TABLES:
-            query = f"DELETE FROM `{table}` WHERE student_id = @sid"
+            query = f"DELETE FROM `{table}` WHERE student_id = @sid"  # nosec B608
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[bigquery.ScalarQueryParameter("sid", "STRING", student_id)]
             )
@@ -218,7 +218,7 @@ class GDPRDeletionEngine:
         client: bigquery.Client = self._bq
         bq_clear = True
         for table in BQ_TABLES:
-            query = f"SELECT COUNT(*) AS cnt FROM `{table}` WHERE student_id = @sid"
+            query = f"SELECT COUNT(*) AS cnt FROM `{table}` WHERE student_id = @sid"  # nosec B608
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[bigquery.ScalarQueryParameter("sid", "STRING", student_id)]
             )

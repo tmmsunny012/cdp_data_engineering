@@ -83,7 +83,11 @@ class TestRead:
             connector.read()
 """
 
-_jinja_env = Environment(loader=BaseLoader(), keep_trailing_newline=True)
+_jinja_env = Environment(  # nosec B701
+    loader=BaseLoader(),
+    keep_trailing_newline=True,
+    autoescape=False,
+)
 
 # --------------------------------------------------------------------------- #
 # CLI group                                                                    #

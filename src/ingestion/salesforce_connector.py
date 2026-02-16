@@ -117,7 +117,7 @@ class SalesforceConnector:
                 self._check_rate_limit()
                 # Query recently modified records as a CDC approximation.
                 query = (
-                    f"SELECT {', '.join(SF_FIELD_MAP.keys())} "
+                    f"SELECT {', '.join(SF_FIELD_MAP.keys())} "  # nosec B608
                     f"FROM {sobject} "
                     f"WHERE LastModifiedDate = TODAY ORDER BY LastModifiedDate DESC LIMIT 200"
                 )

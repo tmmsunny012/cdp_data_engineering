@@ -170,7 +170,7 @@ class CDPDataQualityChecker:
         from google.cloud import bigquery
 
         client = bigquery.Client()
-        query = f"SELECT MAX(_ingested_at) AS latest FROM `{table}`"
+        query = f"SELECT MAX(_ingested_at) AS latest FROM `{table}`"  # nosec B608
         rows = client.query(query).result()
         latest: datetime | None = next(iter(rows)).latest
         if latest is None:
@@ -190,7 +190,7 @@ class CDPDataQualityChecker:
         client = bigquery.Client()
         field_list = ", ".join(fields)
         query = (
-            f"SELECT source, {field_list} "
+            f"SELECT source, {field_list} "  # nosec B608
             f"FROM `cdp_silver.profile_attributes` "
             f"WHERE profile_id = @pid"
         )

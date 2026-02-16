@@ -98,15 +98,15 @@ class BigQueryLoader:
         target = self._table_ref(target_table)
         staging = self._table_ref(staging_table)
         on_clause = " AND ".join(f"T.{k} = S.{k}" for k in merge_keys)
-        sql = f"""
-        MERGE `{target}` T
-        USING `{staging}` S
-        ON {on_clause}
-        WHEN MATCHED THEN
-            UPDATE SET T.updated_at = CURRENT_TIMESTAMP()
-        WHEN NOT MATCHED THEN
-            INSERT ROW
-        """
+        sql = (
+            f"MERGE `{target}` T "  # nosec B608
+            f"USING `{staging}` S "
+            f"ON {on_clause} "
+            "WHEN MATCHED THEN "
+            "UPDATE SET T.updated_at = CURRENT_TIMESTAMP() "
+            "WHEN NOT MATCHED THEN "
+            "INSERT ROW"
+        )
         self.run_query(sql)
         logger.info("MERGE complete: %s → %s", staging, target)
 
@@ -116,7 +116,7 @@ class BigQueryLoader:
         """Delete all rows for *student_id* across the specified BQ tables."""
         for tbl in tables:
             ref = self._table_ref(tbl)
-            sql = f"DELETE FROM `{ref}` WHERE student_id = @sid"
+            sql = f"DELETE FROM `{ref}` WHERE student_id = @sid"  # nosec B608
             job_config = QueryJobConfig(
                 query_parameters=[bigquery.ScalarQueryParameter("sid", "STRING", student_id)]
             )

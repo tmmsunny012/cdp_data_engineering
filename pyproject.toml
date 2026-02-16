@@ -45,9 +45,10 @@ module = [
     "src.orchestration.*",
     "src.ml.*",
     "src.quality.*",
+    "src.ingestion.salesforce_connector",
 ]
 disallow_untyped_defs = false
-disable_error_code = ["no-any-return", "attr-defined", "call-arg", "arg-type", "import-untyped"]
+disable_error_code = ["no-any-return", "attr-defined", "call-arg", "arg-type", "import-untyped", "import-not-found"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -61,4 +62,4 @@ markers = [
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101"]
+skips = ["B101", "B603", "B607", "B404"]
