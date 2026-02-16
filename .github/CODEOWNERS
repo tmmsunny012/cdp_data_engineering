@@ -1,0 +1,23 @@
+# CDP Data Engineering — Code Ownership
+# Each line maps a file pattern to one or more owners.
+# Owners are automatically requested for review on PRs.
+
+# Data model changes need senior review
+src/storage/models/                 @senior-data-engineer
+
+# Identity resolution is critical path
+src/processing/identity_*           @senior-data-engineer @data-scientist
+
+# Privacy/GDPR code needs compliance review
+src/privacy/                        @senior-data-engineer @compliance-lead
+
+# AI/ML changes need ML team review
+src/ml/                             @senior-data-engineer @ml-engineer
+
+# Infrastructure changes need DevOps review
+docker-compose.yml                  @senior-data-engineer @devops
+Dockerfile                          @senior-data-engineer @devops
+.github/workflows/                  @senior-data-engineer @devops
+
+# Everything else — any data engineering team member
+*                                   @data-engineering-team

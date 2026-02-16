@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP Architecture — Slide Diagrams</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* ── Navigation ─────────────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            background: #161b22;
+            border-right: 1px solid #30363d;
+            padding: 14px 0;
+            overflow-y: auto;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+        nav h3 {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #8b949e;
+            padding: 0 14px;
+            margin-bottom: 10px;
+        }
+        nav a {
+            display: block;
+            padding: 7px 14px;
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 0.8rem;
+            border-left: 3px solid transparent;
+            transition: all 0.15s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        nav a:hover {
+            color: #c9d1d9;
+            background: #1c2129;
+        }
+        nav a.active {
+            color: #f0f6fc;
+            background: #1c2129;
+            border-left-color: #58a6ff;
+            font-weight: 600;
+        }
+        nav a .num {
+            display: inline-block;
+            width: 22px;
+            color: #484f58;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+        nav a.active .num {
+            color: #58a6ff;
+        }
+        .nav-footer {
+            margin-top: auto;
+            padding: 12px 14px;
+            border-top: 1px solid #30363d;
+            color: #484f58;
+            font-size: 0.7rem;
+            line-height: 1.5;
+        }
+        kbd {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 0.65rem;
+            font-family: inherit;
+            color: #8b949e;
+        }
+
+        /* ── Slide container ───────────────────────────── */
+        main {
+            margin-left: 220px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px 32px 16px;
+            overflow: hidden;
+        }
+        .slide.active {
+            display: flex;
+        }
+
+        .slide-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+        .slide-num {
+            background: #1f6feb;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .slide h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+        .slide p.subtitle {
+            color: #8b949e;
+            font-size: 0.82rem;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        /* ── Diagram fills all remaining space ─────────── */
+        .diagram-wrapper {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 8px;
+        }
+        .diagram-wrapper .mermaid {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Override Mermaid's inline max-width that shrinks SVGs */
+        .diagram-wrapper .mermaid svg {
+            max-width: 100% !important;
+            max-height: 100% !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ── Slide counter bottom-right ────────────────── */
+        .slide-counter {
+            position: fixed;
+            bottom: 12px;
+            right: 20px;
+            color: #484f58;
+            font-size: 0.75rem;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h3>Slide Diagrams</h3>
+    <a data-slide="overview" class="active"><span class="num">1</span> Full Overview</a>
+    <a data-slide="sources"><span class="num">2</span> Data Sources</a>
+    <a data-slide="ingestion"><span class="num">3</span> Ingestion Layer</a>
+    <a data-slide="processing"><span class="num">4</span> Processing Layer</a>
+    <a data-slide="identity"><span class="num">5</span> Identity Resolution</a>
+    <a data-slide="storage"><span class="num">6</span> Storage Layer</a>
+    <a data-slide="medallion"><span class="num">7</span> Medallion Arch.</a>
+    <a data-slide="reverse-etl"><span class="num">8</span> Reverse ETL</a>
+    <a data-slide="segmentation"><span class="num">9</span> Segmentation</a>
+    <a data-slide="quality"><span class="num">10</span> Data Quality Gates</a>
+    <a data-slide="gdpr"><span class="num">11</span> GDPR &amp; Privacy</a>
+    <a data-slide="aiml"><span class="num">12</span> AI/ML Layer</a>
+    <a data-slide="observability"><span class="num">13</span> Observability</a>
+    <div class="nav-footer">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate<br/>
+        <kbd>F</kbd> fullscreen
+    </div>
+</nav>
+
+<main>
+
+<!-- 1. FULL OVERVIEW -->
+<div class="slide active" id="overview">
+    <div class="slide-header"><span class="slide-num">SLIDE 3</span><h2>High-Level Architecture — Full Overview</h2></div>
+    <p class="subtitle">All layers in a single view — use this as the overview slide</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    subgraph Sources ["Sources"]
+        WEB["Website"] ~~~ MOB["Mobile App"] ~~~ CRM["Salesforce"] ~~~ EMAIL["Email"] ~~~ WA["WhatsApp"]
+    end
+
+    subgraph Ingestion ["Ingestion"]
+        KAFKA["Kafka"] --> SR["Schema<br/>Registry"] --> FN["Format<br/>Normalizer"]
+    end
+
+    subgraph Processing ["Processing"]
+        SP["Stream<br/>Processor"] --> IR["Identity<br/>Resolution"] --> PB["Profile<br/>Builder"]
+    end
+
+    subgraph Storage ["Storage"]
+        MEDAL["Bronze &rarr; Silver &rarr; Gold"]
+        MONGO["MongoDB"] ~~~ BQ["BigQuery"]
+    end
+
+    subgraph Serving ["Serving"]
+        API["Profile API"] --> SEG["Segmentation"] --> RETL["Reverse ETL"]
+    end
+
+    subgraph AI ["AI/ML"]
+        VFS["Vertex AI"] ~~~ PC["Pinecone"]
+    end
+
+    Sources --> Ingestion --> Processing --> Storage --> Serving
+    BQ --> AI
+    RETL -.->|sync| Sources
+    style Sources fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Ingestion fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style Processing fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Storage fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style Serving fill:#1a3a3a,stroke:#39d2c0,color:#e6edf3
+    style AI fill:#3a1a2a,stroke:#f778ba,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 2. DATA SOURCES -->
+<div class="slide" id="sources">
+    <div class="slide-header"><span class="slide-num">SLIDE 4</span><h2>Data Sources — 5 Inputs, 3 Formats</h2></div>
+    <p class="subtitle">Each source with its data format, key fields, and Kafka topic</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    subgraph JSON_Sources ["JSON Sources"]
+        WEB["Website<br/>Clickstream<br/><i>session_id, page, UTM</i>"]
+        MOB["Mobile App<br/>Events<br/><i>device_id, push_token</i>"]
+        EMAIL["Email<br/>Webhooks<br/><i>campaign_id, open/click</i>"]
+    end
+    subgraph Mixed ["JSON + CSV"]
+        CRM["Salesforce CRM<br/>CDC (JSON) + Bulk (CSV)<br/><i>sf_id, email, phone, status</i>"]
+    end
+    subgraph Unstructured ["Unstructured Text"]
+        WA["WhatsApp<br/>Twilio Webhooks<br/><i>phone, raw message text</i>"]
+    end
+    subgraph Topics ["Kafka Topics"]
+        T1["cdp.raw.clickstream"]
+        T2["cdp.raw.mobile_app"]
+        T3["cdp.raw.email"]
+        T4["cdp.raw.crm"]
+        T5["cdp.raw.whatsapp"]
+    end
+    WEB -->|JSON| T1
+    MOB -->|JSON| T2
+    EMAIL -->|JSON| T3
+    CRM -->|JSON/CSV| T4
+    WA -->|Text| T5
+    style JSON_Sources fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Mixed fill:#2a3a1a,stroke:#d29922,color:#e6edf3
+    style Unstructured fill:#3a1a2a,stroke:#f778ba,color:#e6edf3
+    style Topics fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 3. INGESTION LAYER -->
+<div class="slide" id="ingestion">
+    <div class="slide-header"><span class="slide-num">SLIDE 5</span><h2>Ingestion Layer — Kafka + Schema Registry</h2></div>
+    <p class="subtitle">Event streaming with validation, normalization, and dead-letter queue</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    subgraph Sources ["Connectors"]
+        CC["clickstream_consumer.py"]
+        MC["mobile_app_consumer.py"]
+        SC["salesforce_connector.py"]
+        EW["email_webhook.py"]
+        TW["twilio_webhook.py"]
+    end
+    subgraph Kafka ["Apache Kafka"]
+        direction TB
+        RAW["Raw Topics<br/>cdp.raw.*<br/><i>Partitioned by source ID</i>"]
+        PROC["Processed Topics<br/>cdp.processed.*<br/><i>Partitioned by student_id</i>"]
+        DLQ["Dead Letter Queue<br/>cdp.dlq<br/><i>Failed events</i>"]
+    end
+    SR["Schema Registry<br/><i>Backward-compatible<br/>JSON / Avro schemas</i>"]
+    FN["Format Normalizer<br/><i>format_normalizer.py</i><br/>JSON / CSV / Text &rarr; CustomerEvent"]
+    CC --> RAW
+    MC --> RAW
+    SC --> RAW
+    EW --> RAW
+    TW --> RAW
+    RAW --> SR
+    SR -->|valid| FN
+    SR -->|invalid| DLQ
+    FN --> PROC
+    style Sources fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Kafka fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 4. PROCESSING LAYER -->
+<div class="slide" id="processing">
+    <div class="slide-header"><span class="slide-num">SLIDE 6</span><h2>Processing Layer — Stream + Batch</h2></div>
+    <p class="subtitle">Real-time async Python microservices + scheduled Airflow DAGs</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph TB
+    subgraph Stream ["STREAM (Real-Time &lt; 5 min)"]
+        direction LR
+        KF["Kafka<br/>cdp.processed.*"]
+        SP["stream_processor.py<br/><i>Async Python</i>"]
+        IR1["identity_resolution.py<br/><i>Deterministic match</i>"]
+        PB1["profile_builder.py<br/><i>MongoDB upsert</i>"]
+        SEG1["segmentation_engine.py<br/><i>Rule evaluation</i>"]
+        KF --> SP --> IR1 --> PB1 --> SEG1
+    end
+    subgraph Batch ["BATCH (Scheduled — Airflow)"]
+        direction LR
+        AIR["cdp_dag.py<br/><i>Airflow orchestration</i>"]
+        CSV["CSV Bulk Imports<br/><i>salesforce_connector.py</i>"]
+        DBT["dbt Transforms<br/><i>Bronze &rarr; Silver &rarr; Gold</i>"]
+        ML["ML Pipelines<br/><i>Feature Store + Embeddings</i>"]
+        AIR --> CSV
+        AIR --> DBT
+        AIR --> ML
+    end
+    subgraph Output ["Destinations"]
+        MONGO["MongoDB<br/>(Profiles)"]
+        BQ["BigQuery<br/>(Analytics)"]
+    end
+    PB1 --> MONGO
+    PB1 --> BQ
+    DBT --> BQ
+    CSV --> BQ
+    style Stream fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Batch fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style Output fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 5. IDENTITY RESOLUTION -->
+<div class="slide" id="identity">
+    <div class="slide-header"><span class="slide-num">SLIDE 7</span><h2>Identity Resolution — One Student, Five Identities</h2></div>
+    <p class="subtitle">Two-phase matching: deterministic (exact) then probabilistic (fuzzy)</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph TB
+    subgraph Identifiers ["Incoming Identifiers"]
+        E1["session_id<br/><i>Website</i>"]
+        E2["email<br/><i>Form / CRM / App</i>"]
+        E3["device_id<br/><i>Mobile App</i>"]
+        E4["sf_id<br/><i>Salesforce</i>"]
+        E5["phone<br/><i>WhatsApp / CRM</i>"]
+    end
+    subgraph Phase1 ["Phase 1: Deterministic (exact match)"]
+        DET["MongoDB Indexed Lookup<br/><i>identifiers.value</i><br/>~85% of matches"]
+    end
+    subgraph Phase2 ["Phase 2: Probabilistic (fuzzy)"]
+        PROB["Name + Location Similarity<br/><i>Confidence threshold: 0.85</i><br/>~15% of matches"]
+    end
+    subgraph Result ["Resolution Result"]
+        MATCH["Merge Profiles<br/><i>CRM wins for contact info</i><br/><i>Most restrictive consent</i>"]
+        NEW["Create New Profile"]
+        REVIEW["Manual Review Queue<br/><i>Confidence 0.7 — 0.85</i>"]
+    end
+    E1 --> DET
+    E2 --> DET
+    E3 --> DET
+    E4 --> DET
+    E5 --> DET
+    DET -->|match found| MATCH
+    DET -->|no match| PROB
+    PROB -->|confidence &ge; 0.85| MATCH
+    PROB -->|confidence &lt; 0.7| NEW
+    PROB -->|0.7 — 0.85| REVIEW
+    style Identifiers fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Phase1 fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style Phase2 fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Result fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 6. STORAGE LAYER -->
+<div class="slide" id="storage">
+    <div class="slide-header"><span class="slide-num">SLIDE 8</span><h2>Storage — MongoDB + BigQuery (Dual Store)</h2></div>
+    <p class="subtitle">Hot path (real-time profiles) + analytical path (SQL analytics)</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph TB
+    EVT["Kafka Event<br/><i>Same event writes to both</i>"]
+    subgraph Operational ["MongoDB (Operational Store)"]
+        M1["&lt; 10ms reads"]
+        M2["Flexible document model"]
+        M3["Profile API, Segmentation,<br/>Marketing Triggers"]
+        M4["5M+ documents"]
+    end
+    subgraph Analytical ["BigQuery (Analytical Store)"]
+        B1["Seconds to minutes"]
+        B2["Structured SQL tables<br/>(partitioned + clustered)"]
+        B3["Analytics team, Data Science,<br/>Reverse ETL, BigQuery ML"]
+        B4["Petabyte-scale, $5/TB"]
+    end
+    RECON["Nightly Reconciliation<br/><i>cdp_dag.py</i><br/>Detect &amp; heal drift"]
+    EVT --> Operational
+    EVT --> Analytical
+    Operational <-->|compare| RECON
+    Analytical <-->|compare| RECON
+    style Operational fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Analytical fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 7. MEDALLION ARCHITECTURE -->
+<div class="slide" id="medallion">
+    <div class="slide-header"><span class="slide-num">SLIDE 9</span><h2>Medallion Architecture — Bronze / Silver / Gold</h2></div>
+    <p class="subtitle">Three layers: Raw &rarr; Cleaned &rarr; Enriched, each with quality gates</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    SRC(("Sources"))
+
+    SRC --> G1{{"Gate 1<br/>Schema"}}
+    G1 --> BZ["<b>Bronze</b><br/>Raw formats<br/><i>90 days</i>"]
+
+    BZ -->|format_normalizer| G2{{"Gate 2<br/>Clean"}}
+    G2 --> SV["<b>Silver</b><br/>Unified JSON<br/><i>1 year</i>"]
+
+    SV -->|dbt + identity_res| G3{{"Gate 3<br/>Enrich"}}
+    G3 --> GD["<b>Gold</b><br/>Profiles + Segments<br/><i>2 years</i>"]
+
+    GD --> BQ["BigQuery"]
+    GD --> VFS["Vertex AI"]
+
+    style BZ fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style SV fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style GD fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style G1 fill:#2a2a2a,stroke:#8b949e,color:#e6edf3
+    style G2 fill:#2a2a2a,stroke:#8b949e,color:#e6edf3
+    style G3 fill:#2a2a2a,stroke:#8b949e,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 8. REVERSE ETL -->
+<div class="slide" id="reverse-etl">
+    <div class="slide-header"><span class="slide-num">SLIDE 10</span><h2>Reverse ETL — BigQuery &rarr; Marketing Systems</h2></div>
+    <p class="subtitle">Insights flow back to operational systems — consent-gated, idempotent, audited</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    BQ["BigQuery Gold<br/><i>Enriched profiles</i>"]
+    SEG["Segmentation Engine<br/><i>Evaluate rules</i>"]
+    CONSENT["Consent Check<br/><i>consent_manager.py</i>"]
+    GATE4["Gate 4<br/><i>PII safety + row count</i>"]
+    subgraph Targets ["Activation Targets"]
+        SF["Salesforce<br/><i>Update Contact fields</i><br/><i>Create Tasks</i>"]
+        TW["Twilio / WhatsApp<br/><i>Personalized messages</i><br/><i>Deadline reminders</i>"]
+        EM["Email Platform<br/><i>Segment membership</i><br/><i>Campaign triggers</i>"]
+        PUSH["Mobile Push<br/><i>Lesson reminders</i><br/><i>Course recommendations</i>"]
+    end
+    BQ --> SEG --> CONSENT
+    CONSENT -->|consented| GATE4
+    CONSENT -->|denied| BLOCK["Blocked<br/><i>Audit logged</i>"]
+    GATE4 --> SF
+    GATE4 --> TW
+    GATE4 --> EM
+    GATE4 --> PUSH
+    style Targets fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 9. SEGMENTATION -->
+<div class="slide" id="segmentation">
+    <div class="slide-header"><span class="slide-num">SLIDE 11</span><h2>Real-Time Segmentation &amp; Marketing Triggers</h2></div>
+    <p class="subtitle">Event-driven personalization — from student action to multi-channel trigger</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph TB
+    EVT["Student browses<br/>MBA page 3x"]
+    KF["Kafka Event<br/><i>cdp.processed.interactions</i>"]
+    subgraph Engine ["Segmentation Engine"]
+        RULE["Rule Evaluation<br/><i>page_count('mba') &ge; 3</i><br/><i>AND status = 'inquiry'</i><br/><i>AND consent.email = true</i>"]
+        TRIGGER["Trigger:<br/><b>high_intent_mba_prospect</b>"]
+    end
+    subgraph Actions ["Multi-Channel Actions (&lt; 30s)"]
+        A1["Email<br/><i>'Scholarship deadline<br/>in 14 days'</i>"]
+        A2["WhatsApp<br/><i>'Your advisor is<br/>here to help'</i>"]
+        A3["Salesforce<br/><i>'High-intent lead —<br/>call within 24h'</i>"]
+    end
+    EVT --> KF --> RULE --> TRIGGER
+    TRIGGER --> A1
+    TRIGGER --> A2
+    TRIGGER --> A3
+    style Engine fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Actions fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 10. DATA QUALITY -->
+<div class="slide" id="quality">
+    <div class="slide-header"><span class="slide-num">SLIDE 12</span><h2>Data Quality — 4 Gates with Great Expectations</h2></div>
+    <p class="subtitle">Quality enforcement at every layer transition — no bad data passes through</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    SRC(("Raw<br/>Data"))
+
+    SRC --> G1["GATE 1<br/><b>Ingestion</b><br/>Schema &bull; Required fields<br/>Timestamp format"]
+    G1 --> BRONZE["Bronze"]
+    G1 -.->|fail| DLQ["DLQ"]
+
+    BRONZE --> G2["GATE 2<br/><b>Bronze &rarr; Silver</b><br/>Nulls &bull; Types<br/>Dedup &bull; Referential"]
+    G2 --> SILVER["Silver"]
+    G2 -.->|fail| H1["DAG Halt"]
+
+    SILVER --> G3["GATE 3<br/><b>Silver &rarr; Gold</b><br/>Completeness &ge; 60%<br/>Identity conf &ge; 0.85"]
+    G3 --> GOLD["Gold"]
+    G3 -.->|fail| H2["DAG Halt"]
+
+    GOLD --> G4["GATE 4<br/><b>Pre-Reverse ETL</b><br/>No PII leaks<br/>Row count &plusmn;20%"]
+    G4 --> OUT(("Activate<br/>Channels"))
+    G4 -.->|fail| BLK["Blocked"]
+
+    style G1 fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style G2 fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style G3 fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style G4 fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style DLQ fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style H1 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style H2 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style BLK fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 11. GDPR & PRIVACY -->
+<div class="slide" id="gdpr">
+    <div class="slide-header"><span class="slide-num">SLIDE 13</span><h2>GDPR &amp; Privacy — Consent + Right-to-Forget</h2></div>
+    <p class="subtitle">Privacy as architecture — consent management, PII encryption, cascade deletion</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    REQ(("Deletion<br/>Request"))
+
+    REQ --> D1["MongoDB"]
+    REQ --> D2["BigQuery"]
+    REQ --> D3["Pinecone"]
+    REQ --> D4["Vertex AI"]
+    REQ --> D5["Kafka<br/><i>tombstone</i>"]
+    REQ --> D6["Salesforce"]
+
+    D1 --> AUDIT["Audit Log"]
+    D2 --> AUDIT
+    D3 --> AUDIT
+    D4 --> AUDIT
+    D5 --> AUDIT
+    D6 --> AUDIT
+
+    AUDIT --> VERIFY["Verify<br/><i>0 results in all stores</i>"]
+
+    subgraph PII ["PII Protection"]
+        P1["Field Encryption<br/><i>GCP KMS</i>"]
+        P2["Tokenization<br/><i>No raw PII in analytics</i>"]
+        P3["Log Redaction<br/><i>Auto-scrub PII</i>"]
+    end
+
+    style D1 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style D2 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style D3 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style D4 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style D5 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style D6 fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style PII fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 12. AI/ML LAYER -->
+<div class="slide" id="aiml">
+    <div class="slide-header"><span class="slide-num">SLIDE 14</span><h2>AI/ML Data Serving — Vertex AI + Pinecone</h2></div>
+    <p class="subtitle">Structured features for predictions + vector embeddings for similarity search</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    BQ(("BigQuery<br/>Gold"))
+
+    BQ --> AIR["Airflow<br/><i>Nightly batch</i>"]
+    BQ --> STREAM["Stream<br/><i>Real-time</i>"]
+
+    AIR --> VFS["<b>Vertex AI</b><br/>Feature Store<br/><i>&lt; 10ms serving</i>"]
+    STREAM --> VFS
+
+    AIR --> EMB["Embedding<br/>Generator<br/><i>textembedding-gecko</i>"]
+    EMB --> PC["<b>Pinecone</b><br/>Vector Search<br/><i>&lt; 50ms queries</i>"]
+
+    VFS --> USE1["Churn Prediction<br/>Next-Best-Action<br/>Enrollment Probability"]
+    PC --> USE2["Students Like You<br/>Course Recs<br/>Auto-Reply"]
+
+    style VFS fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style PC fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style USE1 fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style USE2 fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    </div></div>
+</div>
+
+<!-- 13. OBSERVABILITY -->
+<div class="slide" id="observability">
+    <div class="slide-header"><span class="slide-num">SLIDE 15</span><h2>Observability — Logging, Metrics, Alerting</h2></div>
+    <p class="subtitle">Three pillars of observability with tiered alerting</p>
+    <div class="diagram-wrapper"><div class="mermaid">
+graph LR
+    subgraph Logs ["Logs"]
+        L1["Cloud Logging<br/><i>Structured JSON</i>"]
+        L2["Correlation IDs"]
+        L3["PII Redacted"]
+    end
+
+    subgraph Metrics ["Metrics"]
+        M1["Prometheus + Grafana"]
+        M2["kafka_lag &bull; api_p99<br/>freshness &bull; dlq_count"]
+    end
+
+    subgraph Traces ["Traces"]
+        T1["OpenTelemetry"]
+        T2["End-to-end latency"]
+    end
+
+    Logs --> CRIT["<b>CRITICAL</b><br/>PagerDuty<br/><i>Lag &gt; 10K, p99 &gt; 500ms</i>"]
+    Metrics --> CRIT
+    Traces --> CRIT
+
+    Logs --> WARN["<b>WARNING</b><br/>Slack<br/><i>Freshness &gt; 1hr, cost &gt; 80%</i>"]
+    Metrics --> WARN
+
+    Metrics --> INFO["<b>INFO</b><br/>Dashboard<br/><i>Daily counts, trends</i>"]
+
+    style Logs fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style Metrics fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Traces fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style CRIT fill:#3a1a1a,stroke:#f85149,color:#e6edf3
+    style WARN fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style INFO fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    </div></div>
+</div>
+
+</main>
+
+<div class="slide-counter"><span id="current-num">1</span> / 13</div>
+
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        themeVariables: {
+            darkMode: true,
+            background: '#0d1117',
+            primaryColor: '#1f6feb',
+            primaryTextColor: '#e6edf3',
+            primaryBorderColor: '#58a6ff',
+            lineColor: '#8b949e',
+            secondaryColor: '#161b22',
+            tertiaryColor: '#21262d',
+            fontSize: '16px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif',
+        },
+        flowchart: {
+            htmlLabels: true,
+            curve: 'basis',
+            padding: 16,
+            nodeSpacing: 30,
+            rankSpacing: 50,
+        },
+    });
+
+    // ── Render all slides, then fix SVG sizing ─────────
+    // 1. Temporarily show ALL slides so Mermaid can render them
+    const allSlides = document.querySelectorAll('.slide');
+    allSlides.forEach(s => { s.style.display = 'flex'; s.style.position = 'absolute'; s.style.visibility = 'hidden'; });
+
+    // 2. Render all mermaid diagrams
+    await mermaid.run();
+
+    // 3. Strip Mermaid's inline max-width and force SVGs to scale
+    document.querySelectorAll('.diagram-wrapper .mermaid svg').forEach(svg => {
+        svg.style.maxWidth = '100%';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        if (!svg.getAttribute('viewBox')) {
+            const bbox = svg.getBBox();
+            svg.setAttribute('viewBox', `0 0 ${bbox.width + 20} ${bbox.height + 20}`);
+        }
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    });
+
+    // 4. Restore: hide all, show only the first
+    allSlides.forEach(s => { s.style.display = ''; s.style.position = ''; s.style.visibility = ''; });
+    allSlides[0].classList.add('active');
+
+    // ── Slide switching logic ──────────────────────────
+    const navLinks = document.querySelectorAll('nav a[data-slide]');
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('current-num');
+    let currentIndex = 0;
+
+    function showSlide(index) {
+        if (index < 0 || index >= slides.length) return;
+        currentIndex = index;
+
+        slides.forEach(s => s.classList.remove('active'));
+        navLinks.forEach(l => l.classList.remove('active'));
+
+        slides[index].classList.add('active');
+        navLinks[index].classList.add('active');
+        counter.textContent = index + 1;
+
+        // Scroll nav item into view if needed
+        navLinks[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    // Nav click
+    navLinks.forEach((link, i) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSlide(i);
+        });
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            showSlide(currentIndex + 1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            showSlide(currentIndex - 1);
+        } else if (e.key === 'Home') {
+            e.preventDefault();
+            showSlide(0);
+        } else if (e.key === 'End') {
+            e.preventDefault();
+            showSlide(slides.length - 1);
+        } else if (e.key === 'f' || e.key === 'F') {
+            // Toggle fullscreen (hides nav)
+            document.body.classList.toggle('fullscreen');
+        }
+    });
+
+    // Fullscreen mode: hide nav, diagram takes full width
+    const style = document.createElement('style');
+    style.textContent = `
+        body.fullscreen nav { display: none; }
+        body.fullscreen main { margin-left: 0; }
+        body.fullscreen .slide-counter { left: 20px; right: auto; }
+    `;
+    document.head.appendChild(style);
+</script>
+
+</body>
+</html>

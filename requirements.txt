@@ -1,0 +1,66 @@
+# Core
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Kafka
+aiokafka>=0.10.0
+confluent-kafka>=2.3.0
+
+# MongoDB
+motor>=3.3.0
+pymongo>=4.6.0
+
+# Google Cloud
+google-cloud-bigquery>=3.14.0
+google-cloud-storage>=2.14.0
+google-cloud-aiplatform>=1.38.0
+vertexai>=0.0.1
+
+# Pinecone
+pinecone-client>=3.0.0
+
+# Salesforce
+simple-salesforce>=1.12.0
+
+# Twilio
+twilio>=9.0.0
+
+# Data Processing
+polars>=0.20.0
+pandas>=2.1.0
+
+# Orchestration
+apache-airflow>=2.8.0
+
+# Data Quality
+great-expectations>=0.18.0
+
+# CLI
+click>=8.1.0
+jinja2>=3.1.0
+
+# Observability
+prometheus-client>=0.19.0
+structlog>=24.1.0
+opentelemetry-api>=1.22.0
+opentelemetry-sdk>=1.22.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Code Quality
+ruff>=0.2.0
+mypy>=1.8.0
+bandit>=1.7.0
+
+# NLP (for WhatsApp text processing)
+spacy>=3.7.0
+
+# Utilities
+httpx>=0.26.0
+tenacity>=8.2.0
+python-dotenv>=1.0.0

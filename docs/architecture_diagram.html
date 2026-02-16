@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP Architecture Diagram</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px 40px;
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #f0f6fc;
+        }
+        h2 {
+            font-size: 1rem;
+            font-weight: 400;
+            color: #8b949e;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+        .mermaid {
+            width: 100%;
+            max-width: 1200px;
+        }
+        .mermaid svg {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Customer Data Platform (CDP) Architecture</h1>
+    <h2>Consolidating Student Data for Real-Time Personalization & AI-Powered Engagement</h2>
+
+    <div class="mermaid">
+graph TB
+    subgraph Sources ["Data Sources (5)"]
+        WEB["Website<br/>(JSON Clickstream)"]
+        MOB["Mobile App<br/>(JSON + Device IDs)"]
+        CRM["Salesforce CRM<br/>(JSON CDC + CSV Bulk)"]
+        EMAIL["Email Marketing<br/>(JSON Webhooks)"]
+        WA["WhatsApp/Twilio<br/>(Unstructured Text)"]
+    end
+
+    subgraph Ingestion ["Ingestion Layer"]
+        KAFKA["Apache Kafka<br/>(Event Streaming)"]
+        SR["Schema Registry<br/>(Format Validation)"]
+        FN["Format Normalizer<br/>(JSON/CSV/Text &rarr; Unified)"]
+    end
+
+    subgraph Processing ["Processing Layer"]
+        SP["Async Stream Processor<br/>(Python Microservices)"]
+        IR["Identity Resolution<br/>(Deterministic + Probabilistic)"]
+        PB["Profile Builder<br/>(Golden Record Assembly)"]
+    end
+
+    subgraph Storage ["Storage Layer"]
+        subgraph Medallion ["Medallion Architecture"]
+            BZ["Bronze<br/>(Raw)"]
+            SV["Silver<br/>(Cleaned)"]
+            GD["Gold<br/>(Enriched)"]
+        end
+        MONGO["MongoDB<br/>(Real-Time Profiles)"]
+        BQ["BigQuery<br/>(Analytics Warehouse)"]
+    end
+
+    subgraph Serving ["Serving Layer"]
+        API["Profile API<br/>(FastAPI)"]
+        SEG["Segmentation Engine<br/>(Real-Time Rules)"]
+        RETL["Reverse ETL<br/>(BigQuery &rarr; Sources)"]
+    end
+
+    subgraph AI ["AI/ML Layer"]
+        VFS["Vertex AI<br/>Feature Store"]
+        PC["Pinecone<br/>Vector Search"]
+        EMB["Embedding<br/>Generator"]
+    end
+
+    subgraph Quality ["Quality &amp; Privacy"]
+        GE["Great Expectations<br/>(4 Quality Gates)"]
+        GDPR["GDPR Engine<br/>(Consent + Deletion)"]
+        MON["Monitoring<br/>(Prometheus/Grafana)"]
+    end
+
+    WEB --> KAFKA
+    MOB --> KAFKA
+    CRM --> KAFKA
+    EMAIL --> KAFKA
+    WA --> KAFKA
+
+    KAFKA --> SR --> FN --> SP
+    SP --> IR --> PB
+
+    PB --> BZ --> SV --> GD
+    PB --> MONGO
+    GD --> BQ
+
+    BQ --> API
+    MONGO --> API
+    API --> SEG --> RETL
+
+    BQ --> VFS
+    BQ --> EMB --> PC
+
+    GE -.->|validates| BZ
+    GE -.->|validates| SV
+    GE -.->|validates| GD
+    GE -.->|validates| RETL
+    GDPR -.->|consent check| SP
+    GDPR -.->|consent check| RETL
+
+    RETL -->|Sync profiles| CRM
+    RETL -->|Trigger messages| WA
+    RETL -->|Send campaigns| EMAIL
+
+    style Sources fill:#1a3a2a,stroke:#3fb950,color:#e6edf3
+    style Ingestion fill:#1a2a3a,stroke:#58a6ff,color:#e6edf3
+    style Processing fill:#2a1a3a,stroke:#bc8cff,color:#e6edf3
+    style Storage fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style Medallion fill:#3a2a1a,stroke:#d29922,color:#e6edf3
+    style Serving fill:#1a3a3a,stroke:#39d2c0,color:#e6edf3
+    style AI fill:#3a1a2a,stroke:#f778ba,color:#e6edf3
+    style Quality fill:#2a2a2a,stroke:#8b949e,color:#e6edf3
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                darkMode: true,
+                background: '#0d1117',
+                primaryColor: '#1f6feb',
+                primaryTextColor: '#e6edf3',
+                primaryBorderColor: '#58a6ff',
+                lineColor: '#8b949e',
+                secondaryColor: '#161b22',
+                tertiaryColor: '#21262d',
+                fontSize: '14px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif',
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 16,
+                nodeSpacing: 30,
+                rankSpacing: 40,
+            },
+        });
+    </script>
+</body>
+</html>
