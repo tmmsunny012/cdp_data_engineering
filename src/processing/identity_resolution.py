@@ -24,7 +24,7 @@ DETERMINISTIC_FIELDS = ("email", "phone", "device_id", "session_id", "salesforce
 class IdentityResolver:
     """Resolves an inbound event to a single profile_id."""
 
-    def __init__(self, db: AsyncIOMotorDatabase) -> None:
+    def __init__(self, db: AsyncIOMotorDatabase) -> None:  # type: ignore[type-arg]
         self._profiles = db["profiles"]
         self._audit_log = db["identity_audit_log"]
 

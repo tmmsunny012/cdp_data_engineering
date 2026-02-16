@@ -31,11 +31,11 @@ class MongoProfileStore:
         collection: str = "profiles",
         max_pool_size: int = 50,
     ) -> None:
-        self._client: AsyncIOMotorClient = AsyncIOMotorClient(
+        self._client: AsyncIOMotorClient = AsyncIOMotorClient(  # type: ignore[type-arg]
             connection_uri, maxPoolSize=max_pool_size
         )
         self._db = self._client[database]
-        self._col: AsyncIOMotorCollection = self._db[collection]
+        self._col: AsyncIOMotorCollection = self._db[collection]  # type: ignore[type-arg]
 
     # ── reads ─────────────────────────────────────────────────────────
 

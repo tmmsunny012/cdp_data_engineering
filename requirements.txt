@@ -56,6 +56,7 @@ pytest-cov>=4.1.0
 ruff>=0.2.0
 mypy>=1.8.0
 bandit>=1.7.0
+pandas-stubs>=2.1.0
 
 # NLP (for WhatsApp text processing)
 spacy>=3.7.0

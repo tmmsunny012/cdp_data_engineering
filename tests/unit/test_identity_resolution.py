@@ -1,7 +1,9 @@
 """Unit tests for identity resolution engine."""
 
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from src.storage.models.customer_profile import (
     CustomerEvent,
@@ -35,6 +37,7 @@ class TestDeterministicMatching:
             event_id="evt_001",
             event_type="page_view",
             source="website",
+            timestamp=datetime.now(UTC),
             raw_data={"email": "max@gmail.com", "page": "/mba"},
         )
 
@@ -54,6 +57,7 @@ class TestDeterministicMatching:
             event_id="evt_002",
             event_type="whatsapp_message",
             source="whatsapp",
+            timestamp=datetime.now(UTC),
             raw_data={"from": "+49123456789", "body": "When is the MBA deadline?"},
         )
 
@@ -68,6 +72,7 @@ class TestDeterministicMatching:
             event_id="evt_003",
             event_type="app_opened",
             source="app",
+            timestamp=datetime.now(UTC),
             raw_data={"device_id": "dev_new_789"},
         )
 

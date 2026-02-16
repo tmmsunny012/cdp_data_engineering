@@ -91,7 +91,7 @@ async def request_tracing(request: Request, call_next) -> Response:  # type: ign
     return response
 
 
-def _redact_pii(data: dict) -> dict:
+def _redact_pii(data: dict[str, object]) -> dict[str, object]:
     """Mask PII fields in log output."""
     redacted = dict(data)
     info = redacted.get("personal_info", {})
@@ -122,7 +122,7 @@ async def get_profile(
     profile_id: str,
     _key: str = Depends(_rate_limit),
     store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
-) -> dict:
+) -> dict[str, object]:
     profile = await store.get_profile(profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -135,7 +135,7 @@ async def search_profile(
     phone: str | None = None,
     _key: str = Depends(_rate_limit),
     store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
-) -> dict:
+) -> dict[str, object]:
     if email:
         profile = await store.find_by_identifier("email", email)
     elif phone:
@@ -152,7 +152,7 @@ async def get_history(
     profile_id: str,
     _key: str = Depends(_rate_limit),
     bq: BigQueryLoader = Depends(_get_bq_loader),  # noqa: B008
-) -> list[dict]:
+) -> list[dict[str, object]]:
     sql = (
         f"SELECT * FROM `cdp-prod.gold.interaction_history` "
         f"WHERE student_id = '{profile_id}' ORDER BY event_timestamp DESC LIMIT 50"
@@ -164,7 +164,7 @@ async def get_history(
 async def get_similar(
     profile_id: str,
     _key: str = Depends(_rate_limit),
-) -> dict:
+) -> dict[str, object]:
     # Pinecone integration stub — real implementation queries the vector index
     return {
         "profile_id": profile_id,
@@ -179,7 +179,7 @@ async def update_segments(
     body: SegmentUpdate,
     _key: str = Depends(_rate_limit),
     store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
-) -> dict:
+) -> dict[str, object]:
     profile = await store.get_profile(profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")

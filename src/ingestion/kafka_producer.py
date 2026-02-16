@@ -57,7 +57,7 @@ class CDPKafkaProducer:
     """
 
     def __init__(self, client_id: str = "cdp-producer") -> None:
-        kwargs: dict = {
+        kwargs: dict[str, object] = {
             "bootstrap_servers": KAFKA_BOOTSTRAP,
             "client_id": client_id,
             "security_protocol": KAFKA_SECURITY,
@@ -99,7 +99,7 @@ class CDPKafkaProducer:
     async def send(
         self,
         topic: str,
-        value: BaseModel | dict,
+        value: BaseModel | dict[str, object],
         key: str | None = None,
     ) -> None:
         """Publish a message with exponential-backoff retry.

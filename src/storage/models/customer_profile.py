@@ -131,7 +131,7 @@ class CustomerEvent(BaseModel):
         """Coerce naive datetimes to UTC."""
         if isinstance(v, datetime) and v.tzinfo is None:
             return v.replace(tzinfo=UTC)
-        return v
+        return v  # type: ignore[return-value]
 
 
 class CustomerProfile(BaseModel):

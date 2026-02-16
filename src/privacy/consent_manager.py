@@ -50,7 +50,7 @@ class ConsentManager:
 
     CURRENT_TERMS_VERSION: str = "v2.1"
 
-    def __init__(self, mongo_client: AsyncIOMotorClient) -> None:
+    def __init__(self, mongo_client: AsyncIOMotorClient) -> None:  # type: ignore[type-arg]
         db = mongo_client.get_default_database()
         self._consents = db["consents"]
         self._audit_log = db["consent_audit_log"]

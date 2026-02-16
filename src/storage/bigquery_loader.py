@@ -51,7 +51,7 @@ class BigQueryLoader:
                 ref,
                 failed_indexes,
             )
-            raise GoogleAPICallError(f"Streaming insert failures on {ref}: {errors}")
+            raise GoogleAPICallError(f"Streaming insert failures on {ref}: {errors}")  # type: ignore[no-untyped-call]
         logger.debug("Streamed %d rows into %s", len(rows), ref)
 
     # ── batch load from GCS ───────────────────────────────────────────
@@ -61,7 +61,7 @@ class BigQueryLoader:
         table: str,
         gcs_uri: str,
         schema: list[bigquery.SchemaField],
-        source_format: SourceFormat = SourceFormat.CSV,
+        source_format: SourceFormat = SourceFormat.CSV,  # type: ignore[assignment]
     ) -> None:
         """Load data from a GCS URI into a BQ table (batch path).
 
@@ -74,7 +74,7 @@ class BigQueryLoader:
             write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
             time_partitioning=bigquery.TimePartitioning(field="event_date"),
             clustering_fields=["source", "student_id"],
-            skip_leading_rows=1 if source_format == SourceFormat.CSV else 0,
+            skip_leading_rows=1 if source_format == SourceFormat.CSV else 0,  # type: ignore[comparison-overlap]
         )
         ref = self._table_ref(table)
         load_job = self._client.load_table_from_uri(gcs_uri, ref, job_config=job_config)

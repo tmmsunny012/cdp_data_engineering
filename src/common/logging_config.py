@@ -131,8 +131,8 @@ def setup_logging(service_name: str, log_level: str = "INFO") -> structlog.stdli
             structlog.contextvars.merge_contextvars,
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            _inject_context,
-            _redact_pii,
+            _inject_context,  # type: ignore[arg-type]
+            _redact_pii,  # type: ignore[arg-type]
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),
         ],

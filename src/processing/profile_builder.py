@@ -40,7 +40,7 @@ class OptimisticLockError(Exception):
 class ProfileBuilder:
     """Assembles and maintains unified customer profiles."""
 
-    def __init__(self, db: AsyncIOMotorDatabase, max_retries: int = 3) -> None:
+    def __init__(self, db: AsyncIOMotorDatabase, max_retries: int = 3) -> None:  # type: ignore[type-arg]
         self._profiles = db["profiles"]
         self._max_retries = max_retries
 

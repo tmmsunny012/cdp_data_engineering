@@ -69,7 +69,7 @@ class GDPRDeletionEngine:
 
     def __init__(
         self,
-        mongo_store: AsyncIOMotorDatabase,
+        mongo_store: AsyncIOMotorDatabase,  # type: ignore[type-arg]
         bq_loader: Any,
         pinecone_manager: Any,
         vertex_store: Any,
