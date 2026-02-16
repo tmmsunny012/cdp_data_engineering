@@ -4,11 +4,12 @@ Provides streaming inserts for real-time events, GCS-based batch loads for
 large datasets, MERGE upserts for Silver-to-Gold promotion, GDPR deletion,
 and ad-hoc analytics queries with cost tracking.
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Optional, Sequence
+from typing import Any
 
 from google.api_core.exceptions import GoogleAPICallError, ServiceUnavailable
 from google.cloud import bigquery
@@ -80,7 +81,9 @@ class BigQueryLoader:
         load_job.result()  # blocks until complete
         logger.info(
             "Batch load complete: %s → %s (%d rows)",
-            gcs_uri, ref, load_job.output_rows or 0,
+            gcs_uri,
+            ref,
+            load_job.output_rows or 0,
         )
 
     # ── merge upsert (Silver → Gold) ─────────────────────────────────
@@ -115,15 +118,15 @@ class BigQueryLoader:
             ref = self._table_ref(tbl)
             sql = f"DELETE FROM `{ref}` WHERE student_id = @sid"
             job_config = QueryJobConfig(
-                query_parameters=[
-                    bigquery.ScalarQueryParameter("sid", "STRING", student_id)
-                ]
+                query_parameters=[bigquery.ScalarQueryParameter("sid", "STRING", student_id)]
             )
             job = self._client.query(sql, job_config=job_config)
             job.result()
             logger.info(
                 "GDPR delete on %s for student %s — %d rows removed",
-                ref, student_id, job.num_dml_affected_rows or 0,
+                ref,
+                student_id,
+                job.num_dml_affected_rows or 0,
             )
 
     # ── ad-hoc query ──────────────────────────────────────────────────
@@ -140,6 +143,8 @@ class BigQueryLoader:
         bytes_billed = job.total_bytes_billed or 0
         logger.info(
             "Query completed in %.2fs — %d rows, %.2f MB billed",
-            elapsed, len(rows), bytes_billed / 1_048_576,
+            elapsed,
+            len(rows),
+            bytes_billed / 1_048_576,
         )
         return rows

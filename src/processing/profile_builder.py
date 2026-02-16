@@ -3,11 +3,12 @@
 Applies source-of-truth rules, recalculates engagement scores and segments,
 and persists updates to MongoDB with optimistic-locking (version field).
 """
+
 from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -44,9 +45,7 @@ class ProfileBuilder:
         self._max_retries = max_retries
 
     # ── public entry point ───────────────────────────────────────────
-    async def update_profile(
-        self, profile_id: str, event: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def update_profile(self, profile_id: str, event: dict[str, Any]) -> dict[str, Any]:
         for attempt in range(1, self._max_retries + 1):
             profile = await self._profiles.find_one({"profile_id": profile_id})
             if profile is None:
@@ -57,11 +56,9 @@ class ProfileBuilder:
             profile = self._update_interaction_summary(profile, event)
             profile = self._update_scores(profile, event)
             profile = self._update_segments(profile)
-            profile = self._merge_identifiers(
-                profile, event.get("identifiers", [])
-            )
+            profile = self._merge_identifiers(profile, event.get("identifiers", []))
             profile["version"] = version + 1
-            profile["updated_at"] = datetime.now(timezone.utc).isoformat()
+            profile["updated_at"] = datetime.now(UTC).isoformat()
 
             result = await self._profiles.replace_one(
                 {"profile_id": profile_id, "version": version},
@@ -72,7 +69,9 @@ class ProfileBuilder:
                 return profile
             logger.warning(
                 "Optimistic lock conflict on %s (attempt %d/%d)",
-                profile_id, attempt, self._max_retries,
+                profile_id,
+                attempt,
+                self._max_retries,
             )
         raise OptimisticLockError(
             f"Failed to update profile {profile_id} after {self._max_retries} retries"
@@ -80,9 +79,7 @@ class ProfileBuilder:
 
     # ── contact info (CRM is authority) ──────────────────────────────
     @staticmethod
-    def _apply_contact_info(
-        profile: dict[str, Any], event: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _apply_contact_info(profile: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
         source = event.get("source", "")
         if source == CONTACT_INFO_AUTHORITY and event.get("personal_info"):
             profile.setdefault("personal_info", {}).update(event["personal_info"])
@@ -99,31 +96,28 @@ class ProfileBuilder:
     def _update_interaction_summary(
         profile: dict[str, Any], event: dict[str, Any]
     ) -> dict[str, Any]:
-        summary = profile.setdefault("interaction_summary", {
-            "total_interactions": 0,
-            "per_source_count": {},
-            "last_interaction_at": None,
-        })
+        summary = profile.setdefault(
+            "interaction_summary",
+            {
+                "total_interactions": 0,
+                "per_source_count": {},
+                "last_interaction_at": None,
+            },
+        )
         summary["total_interactions"] += 1
         source = event.get("source", "unknown")
-        summary["per_source_count"][source] = (
-            summary["per_source_count"].get(source, 0) + 1
-        )
-        summary["last_interaction_at"] = (
-            event.get("timestamp") or datetime.now(timezone.utc).isoformat()
-        )
+        summary["per_source_count"][source] = summary["per_source_count"].get(source, 0) + 1
+        summary["last_interaction_at"] = event.get("timestamp") or datetime.now(UTC).isoformat()
         return profile
 
     # ── engagement score (recency + frequency) ───────────────────────
     @staticmethod
-    def _update_scores(
-        profile: dict[str, Any], event: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _update_scores(profile: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
         summary = profile.get("interaction_summary", {})
         last_str = summary.get("last_interaction_at")
         if last_str:
             last_dt = datetime.fromisoformat(last_str)
-            days_ago = max((datetime.now(timezone.utc) - last_dt).total_seconds() / 86400, 0)
+            days_ago = max((datetime.now(UTC) - last_dt).total_seconds() / 86400, 0)
             recency = 100.0 * math.exp(-0.693 * days_ago / RECENCY_HALF_LIFE_DAYS)
         else:
             recency = 0.0

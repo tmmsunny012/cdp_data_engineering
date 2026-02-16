@@ -16,10 +16,8 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
-
-from pydantic import ValidationError
+from datetime import UTC, datetime
+from typing import Any
 
 from src.storage.models.customer_profile import CustomerEvent, EventSource
 
@@ -42,10 +40,10 @@ def _parse_timestamp(raw: Any) -> datetime:
     """Best-effort timestamp parsing; always returns UTC."""
     if isinstance(raw, datetime):
         if raw.tzinfo is None:
-            return raw.replace(tzinfo=timezone.utc)
-        return raw.astimezone(timezone.utc)
+            return raw.replace(tzinfo=UTC)
+        return raw.astimezone(UTC)
     if isinstance(raw, (int, float)):
-        return datetime.fromtimestamp(raw, tz=timezone.utc)
+        return datetime.fromtimestamp(raw, tz=UTC)
     if isinstance(raw, str):
         # Replace common named offsets before parsing.
         cleaned = raw.strip()
@@ -55,11 +53,11 @@ def _parse_timestamp(raw: Any) -> datetime:
             dt = datetime.fromisoformat(cleaned)
         except ValueError:
             logger.warning("Unparseable timestamp '%s'; defaulting to now()", raw)
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
-    return datetime.now(timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +101,7 @@ def _extract_entities(text: str) -> dict[str, list[str]]:
 # Normalizer
 # ---------------------------------------------------------------------------
 
+
 class FormatNormalizer:
     """Stateless converter: raw data in any format -> :class:`CustomerEvent`."""
 
@@ -121,14 +120,10 @@ class FormatNormalizer:
             A validated :class:`CustomerEvent`.
         """
         ts_raw = raw_data.get("timestamp") or raw_data.get("event_time")
-        timestamp = _parse_timestamp(ts_raw) if ts_raw else datetime.now(timezone.utc)
+        timestamp = _parse_timestamp(ts_raw) if ts_raw else datetime.now(UTC)
 
         event_type = raw_data.get("event_type") or raw_data.get("event") or "unknown"
-        student_id = (
-            raw_data.get("user_id")
-            or raw_data.get("student_id")
-            or raw_data.get("Id")
-        )
+        student_id = raw_data.get("user_id") or raw_data.get("student_id") or raw_data.get("Id")
 
         return CustomerEvent(
             event_id=raw_data.get("event_id", str(uuid.uuid4())),
@@ -160,7 +155,7 @@ class FormatNormalizer:
                 mapped[cdp_field] = row[csv_col]
 
         ts_raw = mapped.get("timestamp") or mapped.get("event_time")
-        timestamp = _parse_timestamp(ts_raw) if ts_raw else datetime.now(timezone.utc)
+        timestamp = _parse_timestamp(ts_raw) if ts_raw else datetime.now(UTC)
 
         return CustomerEvent(
             event_type=mapped.get("event_type", "csv_import"),

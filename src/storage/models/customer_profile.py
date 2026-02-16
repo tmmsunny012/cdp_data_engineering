@@ -8,16 +8,16 @@ journey modelled here is Inquiry -> Application -> Enrollment -> Active -> Alumn
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
+
 
 class EnrollmentStatus(StrEnum):
     """Lifecycle stages of a student."""
@@ -55,6 +55,7 @@ class EventSource(StrEnum):
 # Sub-models
 # ---------------------------------------------------------------------------
 
+
 class Identifier(BaseModel):
     """A single identifier used to resolve a student across systems."""
 
@@ -65,9 +66,9 @@ class Identifier(BaseModel):
 class PersonalInfo(BaseModel):
     """PII fields -- all optional to support anonymous/partial profiles."""
 
-    name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
 
 
 class ChannelConsent(BaseModel):
@@ -75,9 +76,7 @@ class ChannelConsent(BaseModel):
 
     consented: bool
     timestamp: datetime
-    legal_basis: str = Field(
-        ..., description="E.g. 'legitimate_interest', 'explicit_consent'"
-    )
+    legal_basis: str = Field(..., description="E.g. 'legitimate_interest', 'explicit_consent'")
     version: str = Field(..., description="Consent policy version, e.g. '2.1'")
 
 
@@ -85,7 +84,7 @@ class InteractionSummary(BaseModel):
     """Aggregated interaction counters for quick profile reads."""
 
     total_events: int = 0
-    last_interaction_at: Optional[datetime] = None
+    last_interaction_at: datetime | None = None
     top_channels: dict[str, int] = Field(default_factory=dict)
 
 
@@ -101,13 +100,14 @@ class SourceMetadata(BaseModel):
     """Provenance tracking for data lineage."""
 
     system: str
-    ingested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     pipeline_version: str = "1.0.0"
 
 
 # ---------------------------------------------------------------------------
 # Core models
 # ---------------------------------------------------------------------------
+
 
 class CustomerEvent(BaseModel):
     """Normalized event emitted by every ingestion pipeline.
@@ -121,7 +121,7 @@ class CustomerEvent(BaseModel):
     event_type: str
     source: EventSource
     timestamp: datetime
-    student_id: Optional[str] = None
+    student_id: str | None = None
     raw_data: dict[str, Any] = Field(default_factory=dict)
     normalized_data: dict[str, Any] = Field(default_factory=dict)
 
@@ -130,7 +130,7 @@ class CustomerEvent(BaseModel):
     def _ensure_utc(cls, v: Any) -> datetime:
         """Coerce naive datetimes to UTC."""
         if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
 
 
@@ -148,14 +148,8 @@ class CustomerProfile(BaseModel):
     enrollment_status: EnrollmentStatus = EnrollmentStatus.ANONYMOUS
     segments: list[str] = Field(default_factory=list)
     channel_consent: dict[str, ChannelConsent] = Field(default_factory=dict)
-    interaction_summary: InteractionSummary = Field(
-        default_factory=InteractionSummary
-    )
+    interaction_summary: InteractionSummary = Field(default_factory=InteractionSummary)
     scores: ProfileScores = Field(default_factory=ProfileScores)
     source_metadata: list[SourceMetadata] = Field(default_factory=list)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -7,6 +7,7 @@ every key/value pair and replaces values that look like PII (email addresses,
 phone numbers, person names flagged via an explicit key list) with the literal
 string ``[REDACTED]``.
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,7 +23,8 @@ import structlog
 # Correlation-ID context                                                       #
 # --------------------------------------------------------------------------- #
 _correlation_id_ctx: ContextVar[str | None] = ContextVar(
-    "correlation_id", default=None,
+    "correlation_id",
+    default=None,
 )
 
 
@@ -45,11 +47,23 @@ def set_correlation_id(cid: str) -> None:
 # --------------------------------------------------------------------------- #
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"\+?\d[\d\-\s()]{7,}\d")
-_PII_KEYS = frozenset({
-    "email", "email_address", "phone", "phone_number", "mobile",
-    "first_name", "last_name", "full_name", "name", "student_name",
-    "guardian_name", "parent_email", "personal_email",
-})
+_PII_KEYS = frozenset(
+    {
+        "email",
+        "email_address",
+        "phone",
+        "phone_number",
+        "mobile",
+        "first_name",
+        "last_name",
+        "full_name",
+        "name",
+        "student_name",
+        "guardian_name",
+        "parent_email",
+        "personal_email",
+    }
+)
 _REDACTED = "[REDACTED]"
 
 

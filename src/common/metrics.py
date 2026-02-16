@@ -6,10 +6,11 @@ resolution, BigQuery processing, and real-time profile serving.  A lightweight
 FastAPI middleware automatically instruments HTTP request duration and status
 codes for any service that imports it.
 """
+
 from __future__ import annotations
 
 import time
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from prometheus_client import (
@@ -123,10 +124,13 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         elapsed = time.perf_counter() - start
 
         _http_requests_total.labels(
-            method=method, endpoint=path, status_code=response.status_code,
+            method=method,
+            endpoint=path,
+            status_code=response.status_code,
         ).inc()
         _http_request_duration_seconds.labels(
-            method=method, endpoint=path,
+            method=method,
+            endpoint=path,
         ).observe(elapsed)
         return response
 

@@ -11,7 +11,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -49,7 +49,7 @@ class StoreResult:
 @dataclass
 class DeletionReport:
     student_id: str
-    requested_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    requested_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
     total_duration_seconds: float = 0.0
     store_results: list[StoreResult] = field(default_factory=list)
@@ -59,7 +59,7 @@ class DeletionReport:
 @dataclass
 class VerificationResult:
     student_id: str
-    verified_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    verified_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     all_clear: bool = True
     store_checks: dict[str, bool] = field(default_factory=dict)
 
@@ -102,31 +102,37 @@ class GDPRDeletionEngine:
             report.store_results.append(result)
 
         report.total_duration_seconds = time.monotonic() - start
-        report.completed_at = datetime.now(timezone.utc)
+        report.completed_at = datetime.now(UTC)
         report.fully_deleted = all(r.deleted for r in report.store_results)
 
-        await self._audit.insert_one({
-            "student_id": student_id,
-            "action": "delete",
-            "fully_deleted": report.fully_deleted,
-            "duration_s": report.total_duration_seconds,
-            "store_results": [
-                {"store": r.store, "deleted": r.deleted, "error": r.error}
-                for r in report.store_results
-            ],
-            "timestamp": report.completed_at,
-        })
+        await self._audit.insert_one(
+            {
+                "student_id": student_id,
+                "action": "delete",
+                "fully_deleted": report.fully_deleted,
+                "duration_s": report.total_duration_seconds,
+                "store_results": [
+                    {"store": r.store, "deleted": r.deleted, "error": r.error}
+                    for r in report.store_results
+                ],
+                "timestamp": report.completed_at,
+            }
+        )
 
         if not report.fully_deleted:
             failed = [r.store for r in report.store_results if not r.deleted]
-            logger.error("GDPR deletion PARTIAL FAILURE: student=%s failed_stores=%s", student_id, failed)
+            logger.error(
+                "GDPR deletion PARTIAL FAILURE: student=%s failed_stores=%s", student_id, failed
+            )
         else:
-            logger.info("GDPR deletion completed: student=%s duration=%.1fs", student_id, report.total_duration_seconds)
+            logger.info(
+                "GDPR deletion completed: student=%s duration=%.1fs",
+                student_id,
+                report.total_duration_seconds,
+            )
         return report
 
-    async def _execute_with_retry(
-        self, store_name: str, fn: Any, student_id: str
-    ) -> StoreResult:
+    async def _execute_with_retry(self, store_name: str, fn: Any, student_id: str) -> StoreResult:
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 success = await fn(student_id)
@@ -134,10 +140,14 @@ class GDPRDeletionEngine:
             except Exception as exc:
                 logger.warning(
                     "Deletion attempt %d/%d failed for %s/%s: %s",
-                    attempt, MAX_RETRIES, store_name, student_id, exc,
+                    attempt,
+                    MAX_RETRIES,
+                    store_name,
+                    student_id,
+                    exc,
                 )
                 if attempt < MAX_RETRIES:
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
         return StoreResult(store=store_name, deleted=False, error="max retries exceeded")
 
     async def _delete_from_mongodb(self, student_id: str) -> bool:
@@ -177,7 +187,9 @@ class GDPRDeletionEngine:
         for topic in KAFKA_TOPICS:
             self._kafka.produce(topic, key=student_id.encode(), value=None)
         self._kafka.flush(timeout=10)
-        logger.info("Kafka: published tombstones to %d topics for student=%s", len(KAFKA_TOPICS), student_id)
+        logger.info(
+            "Kafka: published tombstones to %d topics for student=%s", len(KAFKA_TOPICS), student_id
+        )
         return True
 
     async def _delete_from_salesforce(self, student_id: str) -> bool:
@@ -202,6 +214,7 @@ class GDPRDeletionEngine:
 
         # BigQuery
         from google.cloud import bigquery
+
         client: bigquery.Client = self._bq
         bq_clear = True
         for table in BQ_TABLES:
@@ -222,13 +235,15 @@ class GDPRDeletionEngine:
 
         result.all_clear = all(result.store_checks.values())
 
-        await self._audit.insert_one({
-            "student_id": student_id,
-            "action": "verify_deletion",
-            "all_clear": result.all_clear,
-            "store_checks": result.store_checks,
-            "timestamp": result.verified_at,
-        })
+        await self._audit.insert_one(
+            {
+                "student_id": student_id,
+                "action": "verify_deletion",
+                "all_clear": result.all_clear,
+                "store_checks": result.store_checks,
+                "timestamp": result.verified_at,
+            }
+        )
 
         logger.info("Deletion verification: student=%s all_clear=%s", student_id, result.all_clear)
         return result

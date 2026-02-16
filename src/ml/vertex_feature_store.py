@@ -31,7 +31,9 @@ class VertexFeatureStore:
 
         aiplatform.init(project=project_id, location=location)
         self._fs = Featurestore(featurestore_name=feature_store_id)
-        logger.info("Connected to Feature Store %s in %s/%s", feature_store_id, project_id, location)
+        logger.info(
+            "Connected to Feature Store %s in %s/%s", feature_store_id, project_id, location
+        )
 
     # ------------------------------------------------------------------
     # Entity type management

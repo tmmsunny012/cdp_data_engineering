@@ -10,6 +10,7 @@ Provides three commands:
 * ``validate-schemas`` -- runs lightweight JSON-schema validation on all
   registered event schemas.
 """
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,7 @@ import pathlib
 from typing import Final
 
 import click
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
 
 # --------------------------------------------------------------------------- #
 # Project paths                                                                #
@@ -88,6 +89,7 @@ _jinja_env = Environment(loader=BaseLoader(), keep_trailing_newline=True)
 # CLI group                                                                    #
 # --------------------------------------------------------------------------- #
 
+
 @click.group()
 def cli() -> None:
     """CDP Pipeline Generator -- scaffold connectors and validate schemas."""
@@ -96,14 +98,16 @@ def cli() -> None:
 @cli.command("generate-connector")
 @click.option("--name", required=True, help="Snake-case connector name (e.g. whatsapp).")
 @click.option(
-    "--type", "connector_type",
+    "--type",
+    "connector_type",
     type=click.Choice(["streaming", "batch"], case_sensitive=False),
     default="batch",
     show_default=True,
     help="Connector execution model.",
 )
 @click.option(
-    "--format", "fmt",
+    "--format",
+    "fmt",
     type=click.Choice(["json", "csv", "text"], case_sensitive=False),
     default="json",
     show_default=True,

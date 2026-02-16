@@ -8,14 +8,12 @@ monitoring and alerting.
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import great_expectations as gx
-from great_expectations.core import ExpectationSuite
 from great_expectations.dataset import PandasDataset
 
 if TYPE_CHECKING:
@@ -23,11 +21,19 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_SOURCES: set[str] = {"moodle", "canvas", "hubspot", "salesforce", "website", "app", "manual_import"}
+ALLOWED_SOURCES: set[str] = {
+    "moodle",
+    "canvas",
+    "hubspot",
+    "salesforce",
+    "website",
+    "app",
+    "manual_import",
+}
 EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"
@@ -36,11 +42,12 @@ class Severity(str, Enum):
 @dataclass
 class ValidationResult:
     """Structured output from a data quality gate."""
+
     gate: str
     passed: bool
     failed_expectations: list[str] = field(default_factory=list)
     severity: Severity = Severity.INFO
-    evaluated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    evaluated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     record_count: int = 0
     metadata: dict[str, object] = field(default_factory=dict)
 
@@ -107,7 +114,9 @@ class CDPDataQualityChecker:
         ds = PandasDataset(df)
         failures: list[str] = []
 
-        if not ds.expect_column_min_to_be_between("profile_completeness_score", min_value=0.6).success:
+        if not ds.expect_column_min_to_be_between(
+            "profile_completeness_score", min_value=0.6
+        ).success:
             failures.append("profile_completeness_score below 0.6 threshold")
         if not ds.expect_column_min_to_be_between("identity_confidence", min_value=0.85).success:
             failures.append("identity_confidence below 0.85 threshold")
@@ -124,27 +133,23 @@ class CDPDataQualityChecker:
         logger.info("Gate 3 result: passed=%s failures=%d", result.passed, len(failures))
         return result
 
-    def validate_gate4_reverse_etl(
-        self, df: pd.DataFrame, prev_count: int
-    ) -> ValidationResult:
+    def validate_gate4_reverse_etl(self, df: pd.DataFrame, prev_count: int) -> ValidationResult:
         """Gate 4 -- reverse ETL safety checks before writing to destinations."""
-        PII_FIELDS = {"email", "phone", "first_name", "last_name", "date_of_birth"}
+        pii_fields = {"email", "phone", "first_name", "last_name", "date_of_birth"}
         failures: list[str] = []
         current_count = len(df)
 
         lower = prev_count * 0.8
         upper = prev_count * 1.2
         if not (lower <= current_count <= upper):
-            failures.append(
-                f"row count {current_count} outside +-20% of previous {prev_count}"
-            )
+            failures.append(f"row count {current_count} outside +-20% of previous {prev_count}")
 
         ds = PandasDataset(df)
         if not ds.expect_column_values_to_not_be_null("salesforce_contact_id").success:
             failures.append("salesforce_contact_id contains nulls")
 
         marketing_cols = [c for c in df.columns if c.startswith("marketing_")]
-        pii_in_marketing = [c for c in marketing_cols if c.replace("marketing_", "") in PII_FIELDS]
+        pii_in_marketing = [c for c in marketing_cols if c.replace("marketing_", "") in pii_fields]
         if pii_in_marketing:
             failures.append(f"PII detected in marketing fields: {pii_in_marketing}")
 
@@ -171,7 +176,7 @@ class CDPDataQualityChecker:
         if latest is None:
             logger.warning("Table %s has no records", table)
             return False
-        age = (datetime.now(timezone.utc) - latest.replace(tzinfo=timezone.utc)).total_seconds()
+        age = (datetime.now(UTC) - latest.replace(tzinfo=UTC)).total_seconds()
         fresh = age <= max_age_hours * 3600
         logger.info("Freshness check %s: age=%.1fh fresh=%s", table, age / 3600, fresh)
         return fresh
@@ -208,5 +213,7 @@ class CDPDataQualityChecker:
 
         ratio = agreements / comparisons if comparisons else 1.0
         passed = ratio >= threshold
-        logger.info("Cross-source agreement for %s: %.2f (threshold %.2f)", profile_id, ratio, threshold)
+        logger.info(
+            "Cross-source agreement for %s: %.2f (threshold %.2f)", profile_id, ratio, threshold
+        )
         return passed

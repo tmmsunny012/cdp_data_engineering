@@ -4,6 +4,7 @@ Orchestrates hourly transform and daily ML pipelines across the full
 CDP stack: GCS ingestion -> BigQuery Bronze/Silver/Gold -> MongoDB,
 Vertex AI Feature Store, Pinecone, and Salesforce reverse-ETL.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -36,7 +37,7 @@ default_args: dict[str, Any] = {
 @dag(
     dag_id="cdp_batch_pipeline",
     schedule="@hourly",
-    start_date=datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc),
+    start_date=datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC),
     catchup=False,
     default_args=default_args,
     tags=["cdp", "batch", "production"],
@@ -76,12 +77,13 @@ def cdp_batch_pipeline() -> None:
     @task(task_id="bronze_to_silver")
     def bronze_to_silver() -> str:
         """Run dbt models that clean and normalise Bronze into Silver."""
-        from airflow.providers.dbt.cloud.operators.dbt import DbtCloudRunJobOperator
         import subprocess
 
         result = subprocess.run(
             ["dbt", "run", "--select", "tag:silver", "--project-dir", _DBT_PROJECT_DIR],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return result.stdout
 
@@ -89,15 +91,19 @@ def cdp_batch_pipeline() -> None:
     def quality_gate_silver() -> bool:
         """Great Expectations checkpoint against Silver tables."""
         from src.quality.expectations_runner import run_checkpoint
+
         return run_checkpoint(checkpoint_name="silver_validation")
 
     @task(task_id="silver_to_gold")
     def silver_to_gold() -> str:
         """Run dbt models that enrich and aggregate Silver into Gold."""
         import subprocess
+
         result = subprocess.run(
             ["dbt", "run", "--select", "tag:gold", "--project-dir", _DBT_PROJECT_DIR],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return result.stdout
 
@@ -105,24 +111,28 @@ def cdp_batch_pipeline() -> None:
     def quality_gate_gold() -> bool:
         """Great Expectations checkpoint against Gold tables."""
         from src.quality.expectations_runner import run_checkpoint
+
         return run_checkpoint(checkpoint_name="gold_validation")
 
     @task(task_id="update_mongodb_profiles")
     def update_mongodb_profiles() -> int:
         """Sync Gold unified profiles to MongoDB for real-time serving."""
         from src.storage.mongo_sync import sync_profiles
+
         return sync_profiles(bq_table=f"{_BQ_PROJECT}.gold.unified_profiles")
 
     @task(task_id="compute_features")
     def compute_features() -> int:
         """Batch-ingest computed features into Vertex AI Feature Store."""
         from src.ml.feature_store import batch_ingest_features
+
         return batch_ingest_features(source_table=f"{_BQ_PROJECT}.gold.student_features")
 
     @task(task_id="generate_embeddings")
     def generate_embeddings() -> int:
         """Generate embeddings via Vertex AI and upsert to Pinecone."""
         from src.ml.embeddings import generate_and_upsert
+
         return generate_and_upsert(
             source_table=f"{_BQ_PROJECT}.gold.interaction_texts",
             pinecone_index="cdp-interactions",
@@ -132,6 +142,7 @@ def cdp_batch_pipeline() -> None:
     def reverse_etl_salesforce() -> int:
         """Push enriched Gold profiles back to Salesforce (consent-gated)."""
         from src.ingestion.salesforce_reverse_etl import sync_to_salesforce
+
         return sync_to_salesforce(
             source_table=f"{_BQ_PROJECT}.gold.unified_profiles",
             consent_table=f"{_BQ_PROJECT}.gold.consent_flags",
@@ -141,6 +152,7 @@ def cdp_batch_pipeline() -> None:
     def data_freshness_check() -> dict[str, bool]:
         """Verify all upstream sources have data fresher than their SLA."""
         from src.quality.freshness import check_all_sources
+
         return check_all_sources(project=_BQ_PROJECT)
 
     # ---- dependency wiring ----

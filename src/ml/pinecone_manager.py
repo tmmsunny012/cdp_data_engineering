@@ -70,7 +70,12 @@ class PineconeManager:
                     logger.error("Upsert failed after %d retries: %s", _MAX_RETRIES, exc)
                     raise
                 wait = _RETRY_BACKOFF_S * (2 ** (attempt - 1))
-                logger.warning("Pinecone timeout (attempt %d/%d), retrying in %.1fs", attempt, _MAX_RETRIES, wait)
+                logger.warning(
+                    "Pinecone timeout (attempt %d/%d), retrying in %.1fs",
+                    attempt,
+                    _MAX_RETRIES,
+                    wait,
+                )
                 time.sleep(wait)
 
     # ------------------------------------------------------------------
@@ -90,10 +95,7 @@ class PineconeManager:
             filter=filter,
             include_metadata=True,
         )
-        return [
-            {"id": m.id, "score": m.score, "metadata": m.metadata}
-            for m in results.matches
-        ]
+        return [{"id": m.id, "score": m.score, "metadata": m.metadata} for m in results.matches]
 
     # ------------------------------------------------------------------
     # GDPR deletion

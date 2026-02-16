@@ -4,22 +4,21 @@ Provides profile lookup, identity-based search, interaction history
 from BigQuery, similarity search via Pinecone, and segment management.
 Includes API-key auth, rate limiting, request tracing, and PII redaction.
 """
+
 from __future__ import annotations
 
 import logging
 import time
 import uuid
 from collections import defaultdict
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
 from prometheus_client import Histogram
 from pydantic import BaseModel, Field
 
-from src.storage.models.customer_profile import CustomerProfile
-from src.storage.mongodb_profile_store import MongoProfileStore
 from src.storage.bigquery_loader import BigQueryLoader
+from src.storage.mongodb_profile_store import MongoProfileStore
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +41,7 @@ app = FastAPI(title="CDP Profile API", version="1.0.0")
 
 
 # ── Dependencies ──────────────────────────────────────────────────────
+
 
 def _get_profile_store() -> MongoProfileStore:
     """Return singleton profile store — overridden in tests."""
@@ -70,6 +70,7 @@ async def _rate_limit(api_key: str = Depends(_authenticate)) -> str:
 
 # ── Middleware ────────────────────────────────────────────────────────
 
+
 @app.middleware("http")
 async def request_tracing(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
     request_id = str(uuid.uuid4())
@@ -81,7 +82,11 @@ async def request_tracing(request: Request, call_next) -> Response:  # type: ign
     REQUEST_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(elapsed)
     logger.info(
         "req=%s method=%s path=%s status=%d latency=%.4fs",
-        request_id, request.method, request.url.path, response.status_code, elapsed,
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed,
     )
     return response
 
@@ -98,12 +103,14 @@ def _redact_pii(data: dict) -> dict:
 
 # ── Request / Response schemas ────────────────────────────────────────
 
+
 class SegmentUpdate(BaseModel):
     segments_to_add: list[str] = Field(default_factory=list)
     segments_to_remove: list[str] = Field(default_factory=list)
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health() -> dict[str, str]:
@@ -114,7 +121,7 @@ async def health() -> dict[str, str]:
 async def get_profile(
     profile_id: str,
     _key: str = Depends(_rate_limit),
-    store: MongoProfileStore = Depends(_get_profile_store),
+    store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
 ) -> dict:
     profile = await store.get_profile(profile_id)
     if profile is None:
@@ -124,10 +131,10 @@ async def get_profile(
 
 @app.get("/profiles/search")
 async def search_profile(
-    email: Optional[str] = None,
-    phone: Optional[str] = None,
+    email: str | None = None,
+    phone: str | None = None,
     _key: str = Depends(_rate_limit),
-    store: MongoProfileStore = Depends(_get_profile_store),
+    store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
 ) -> dict:
     if email:
         profile = await store.find_by_identifier("email", email)
@@ -144,7 +151,7 @@ async def search_profile(
 async def get_history(
     profile_id: str,
     _key: str = Depends(_rate_limit),
-    bq: BigQueryLoader = Depends(_get_bq_loader),
+    bq: BigQueryLoader = Depends(_get_bq_loader),  # noqa: B008
 ) -> list[dict]:
     sql = (
         f"SELECT * FROM `cdp-prod.gold.interaction_history` "
@@ -159,7 +166,11 @@ async def get_similar(
     _key: str = Depends(_rate_limit),
 ) -> dict:
     # Pinecone integration stub — real implementation queries the vector index
-    return {"profile_id": profile_id, "similar_profiles": [], "note": "Pinecone integration pending"}
+    return {
+        "profile_id": profile_id,
+        "similar_profiles": [],
+        "note": "Pinecone integration pending",
+    }
 
 
 @app.post("/profiles/{profile_id}/segments")
@@ -167,7 +178,7 @@ async def update_segments(
     profile_id: str,
     body: SegmentUpdate,
     _key: str = Depends(_rate_limit),
-    store: MongoProfileStore = Depends(_get_profile_store),
+    store: MongoProfileStore = Depends(_get_profile_store),  # noqa: B008
 ) -> dict:
     profile = await store.get_profile(profile_id)
     if profile is None:

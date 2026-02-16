@@ -16,9 +16,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import polars as pl
 from simple_salesforce import Salesforce
@@ -56,7 +56,7 @@ class SalesforceConnector:
 
     def __init__(self, producer: CDPKafkaProducer) -> None:
         self._producer = producer
-        self._sf: Optional[Salesforce] = None
+        self._sf: Salesforce | None = None
         self._api_calls_today: int = 0
 
     # -- authentication -------------------------------------------------------
@@ -92,9 +92,7 @@ class SalesforceConnector:
 
     def _check_rate_limit(self) -> None:
         if self._api_calls_today >= SF_DAILY_API_LIMIT:
-            raise RuntimeError(
-                f"Salesforce daily API limit reached ({SF_DAILY_API_LIMIT})"
-            )
+            raise RuntimeError(f"Salesforce daily API limit reached ({SF_DAILY_API_LIMIT})")
         self._api_calls_today += 1
 
     # -- CDC streaming --------------------------------------------------------
@@ -129,7 +127,7 @@ class SalesforceConnector:
                     event = CustomerEvent(
                         event_type=f"crm.{sobject.lower()}.changed",
                         source=EventSource.CRM,
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                         student_id=mapped.get("salesforce_id"),
                         raw_data=record,
                         normalized_data=mapped,
@@ -175,14 +173,12 @@ class SalesforceConnector:
             event = CustomerEvent(
                 event_type="crm.lead.csv_import",
                 source=EventSource.CRM,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 student_id=mapped.get("salesforce_id"),
                 raw_data=row,
                 normalized_data=mapped,
             )
-            await self._producer.send(
-                KAFKA_TOPIC, value=event, key=mapped.get("salesforce_id")
-            )
+            await self._producer.send(KAFKA_TOPIC, value=event, key=mapped.get("salesforce_id"))
             published += 1
 
         logger.info("CSV import complete: %d/%d records published", published, len(df))

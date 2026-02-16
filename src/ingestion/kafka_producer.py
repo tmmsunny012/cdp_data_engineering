@@ -10,11 +10,10 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
 
 from aiokafka import AIOKafkaProducer
-from pydantic import BaseModel
 from prometheus_client import Counter
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +79,7 @@ class CDPKafkaProducer:
         return json.dumps(value, default=str).encode("utf-8")
 
     @staticmethod
-    def _key_serialize(key: Optional[str]) -> Optional[bytes]:
+    def _key_serialize(key: str | None) -> bytes | None:
         return key.encode("utf-8") if key else None
 
     # -- lifecycle ------------------------------------------------------------
@@ -101,7 +100,7 @@ class CDPKafkaProducer:
         self,
         topic: str,
         value: BaseModel | dict,
-        key: Optional[str] = None,
+        key: str | None = None,
     ) -> None:
         """Publish a message with exponential-backoff retry.
 
@@ -113,7 +112,7 @@ class CDPKafkaProducer:
         Raises:
             RuntimeError: After *MAX_RETRIES* consecutive failures.
         """
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 await self._producer.send_and_wait(topic, value=value, key=key)

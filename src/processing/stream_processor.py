@@ -3,6 +3,7 @@
 Consumes from cdp.processed.interactions, applies quality checks,
 resolves identities, builds profiles, and stages for BigQuery.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,9 +22,7 @@ from src.processing.profile_builder import ProfileBuilder
 logger = logging.getLogger(__name__)
 
 # ── Prometheus metrics ──────────────────────────────────────────────
-EVENTS_PROCESSED = Counter(
-    "cdp_events_processed_total", "Total events processed", ["source"]
-)
+EVENTS_PROCESSED = Counter("cdp_events_processed_total", "Total events processed", ["source"])
 PROCESSING_LATENCY = Histogram(
     "cdp_processing_latency_seconds", "End-to-end event processing latency"
 )
@@ -95,9 +94,7 @@ class StreamProcessor:
     async def _consume_loop(self) -> None:
         assert self._consumer is not None
         while not self._shutdown_event.is_set():
-            batch = await self._consumer.getmany(
-                timeout_ms=1000, max_records=self._cfg.batch_size
-            )
+            batch = await self._consumer.getmany(timeout_ms=1000, max_records=self._cfg.batch_size)
             tasks: list[asyncio.Task[None]] = []
             for _tp, messages in batch.items():
                 for msg in messages:
@@ -121,8 +118,7 @@ class StreamProcessor:
                 assert self._producer is not None
                 await self._producer.send_and_wait(
                     BQ_STAGING_TOPIC,
-                    value={"profile_id": profile_id, "event": event,
-                           "profile_snapshot": profile},
+                    value={"profile_id": profile_id, "event": event, "profile_snapshot": profile},
                 )
                 EVENTS_PROCESSED.labels(source=source).inc()
             except Exception as exc:

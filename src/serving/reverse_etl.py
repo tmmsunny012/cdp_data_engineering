@@ -3,13 +3,13 @@
 All outbound actions are consent-gated, idempotent, audited, and subject
 to Gate 4 quality validation before any data leaves the CDP.
 """
+
 from __future__ import annotations
 
 import hashlib
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 
 # ── Data models ───────────────────────────────────────────────────────
 
+
 class SyncResult(BaseModel):
     """Outcome of a batch sync operation."""
+
     total: int = 0
     succeeded: int = 0
     failed: int = 0
@@ -147,7 +149,9 @@ class ReverseETLEngine:
         )
         success = resp.status_code < 300
         _dedup_seen.add(dedup_key)
-        logger.info("audit=email profile=%s campaign=%s success=%s", profile_id, campaign_id, success)
+        logger.info(
+            "audit=email profile=%s campaign=%s success=%s", profile_id, campaign_id, success
+        )
         return success
 
     # ── Consent check (CRITICAL) ──────────────────────────────────────
@@ -162,9 +166,7 @@ class ReverseETLEngine:
         if profile is None:
             return False
         consent = profile.channel_consent.get(channel)
-        if consent is None or not consent.consented:
-            return False
-        return True
+        return not (consent is None or not consent.consented)
 
     # ── Gate 4 quality validation ─────────────────────────────────────
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Any
 
 from aiokafka import AIOKafkaConsumer
 from pydantic import BaseModel, Field, ValidationError
@@ -28,40 +28,44 @@ DEST_TOPIC = "cdp.processed.interactions"
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 CONSUMER_GROUP = os.getenv("MOBILE_CONSUMER_GROUP", "cdp-mobile-app-cg")
 
-MOBILE_EVENT_TYPES = frozenset({
-    "app_opened",
-    "lesson_completed",
-    "quiz_taken",
-    "push_clicked",
-    "course_downloaded",
-    "study_session_started",
-    "study_session_ended",
-    "notification_received",
-})
+MOBILE_EVENT_TYPES = frozenset(
+    {
+        "app_opened",
+        "lesson_completed",
+        "quiz_taken",
+        "push_clicked",
+        "course_downloaded",
+        "study_session_started",
+        "study_session_ended",
+        "notification_received",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
 # Raw event schema
 # ---------------------------------------------------------------------------
 
+
 class RawMobileAppEvent(BaseModel):
     """Expected shape of a raw mobile-app event."""
 
     event_type: str
     device_id: str
-    advertising_id: Optional[str] = None
-    firebase_token: Optional[str] = None
-    user_id: Optional[str] = None
-    app_version: Optional[str] = None
-    os_name: Optional[str] = None
-    os_version: Optional[str] = None
-    timestamp: Optional[str] = None
+    advertising_id: str | None = None
+    firebase_token: str | None = None
+    user_id: str | None = None
+    app_version: str | None = None
+    os_name: str | None = None
+    os_version: str | None = None
+    timestamp: str | None = None
     properties: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
 # Consumer
 # ---------------------------------------------------------------------------
+
 
 class MobileAppConsumer:
     """Consume, validate, and normalise mobile-app events.
@@ -74,11 +78,11 @@ class MobileAppConsumer:
     def __init__(
         self,
         producer: CDPKafkaProducer,
-        normalizer: Optional[FormatNormalizer] = None,
+        normalizer: FormatNormalizer | None = None,
     ) -> None:
         self._producer = producer
         self._normalizer = normalizer or FormatNormalizer()
-        self._consumer: Optional[AIOKafkaConsumer] = None
+        self._consumer: AIOKafkaConsumer | None = None
 
     async def start(self) -> None:
         self._consumer = AIOKafkaConsumer(
@@ -106,9 +110,7 @@ class MobileAppConsumer:
             Identifier(type=IdentifierType.DEVICE_ID, value=event.device_id),
         ]
         if event.advertising_id:
-            ids.append(
-                Identifier(type=IdentifierType.DEVICE_ID, value=event.advertising_id)
-            )
+            ids.append(Identifier(type=IdentifierType.DEVICE_ID, value=event.advertising_id))
         return ids
 
     # -- main loop ------------------------------------------------------------
@@ -125,9 +127,7 @@ class MobileAppConsumer:
                 validated = RawMobileAppEvent(**raw)
 
                 if validated.event_type not in MOBILE_EVENT_TYPES:
-                    logger.debug(
-                        "Skipping unknown mobile event_type=%s", validated.event_type
-                    )
+                    logger.debug("Skipping unknown mobile event_type=%s", validated.event_type)
                     continue
 
                 customer_event = self._normalizer.normalize_json(
@@ -138,15 +138,17 @@ class MobileAppConsumer:
 
                 # Attach device identifiers and mobile-specific metadata.
                 identifiers = self._extract_identifiers(validated)
-                customer_event.normalized_data.update({
-                    "device_id": validated.device_id,
-                    "advertising_id": validated.advertising_id,
-                    "firebase_token": validated.firebase_token,
-                    "app_version": validated.app_version,
-                    "os": f"{validated.os_name or ''} {validated.os_version or ''}".strip(),
-                    "identifiers": [i.model_dump() for i in identifiers],
-                    **validated.properties,
-                })
+                customer_event.normalized_data.update(
+                    {
+                        "device_id": validated.device_id,
+                        "advertising_id": validated.advertising_id,
+                        "firebase_token": validated.firebase_token,
+                        "app_version": validated.app_version,
+                        "os": f"{validated.os_name or ''} {validated.os_version or ''}".strip(),
+                        "identifiers": [i.model_dump() for i in identifiers],
+                        **validated.properties,
+                    }
+                )
 
                 await self._producer.send(
                     DEST_TOPIC,
@@ -160,6 +162,4 @@ class MobileAppConsumer:
                     exc.error_count(),
                 )
             except Exception:
-                logger.exception(
-                    "Error processing mobile event (offset=%d)", msg.offset
-                )
+                logger.exception("Error processing mobile event (offset=%d)", msg.offset)

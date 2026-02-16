@@ -93,7 +93,7 @@ class EmbeddingGenerator:
         """Embed a course description for similarity matching (LRU-cached)."""
         return self._cached_course_embedding(course_description)
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019 — bounded cache, acceptable for long-lived singleton
     def _cached_course_embedding(self, course_description: str) -> list[float]:
         """Internal LRU-cached wrapper for course description embeddings."""
         logger.debug("Cache miss for course embedding, calling Vertex AI")

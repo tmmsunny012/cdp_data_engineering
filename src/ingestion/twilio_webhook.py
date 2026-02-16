@@ -11,8 +11,7 @@ import hashlib
 import hmac
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Header, HTTPException, Request
@@ -27,7 +26,7 @@ router = APIRouter(tags=["webhooks"])
 TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
 KAFKA_TOPIC = "cdp.raw.whatsapp"
 
-_producer: Optional[CDPKafkaProducer] = None
+_producer: CDPKafkaProducer | None = None
 
 
 async def get_producer() -> CDPKafkaProducer:
@@ -43,24 +42,24 @@ async def get_producer() -> CDPKafkaProducer:
 # Payload models
 # ---------------------------------------------------------------------------
 
+
 class WhatsAppRawEvent(BaseModel):
     """Schema for the raw Kafka message."""
 
     from_number: str
-    body: Optional[str] = None
+    body: str | None = None
     media_urls: list[str] = Field(default_factory=list)
     num_media: int = 0
-    message_sid: Optional[str] = None
-    message_status: Optional[str] = None
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    message_sid: str | None = None
+    message_status: str | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event_kind: str = "message"  # message | status
 
 
 # ---------------------------------------------------------------------------
 # Signature validation
 # ---------------------------------------------------------------------------
+
 
 def _validate_twilio_signature(
     url: str,
@@ -85,14 +84,15 @@ def _validate_twilio_signature(
 # Endpoint
 # ---------------------------------------------------------------------------
 
+
 @router.post("/webhooks/twilio/whatsapp", status_code=200)
 async def twilio_whatsapp_webhook(
     request: Request,
-    From: str = Form(""),
-    Body: str = Form(""),
-    NumMedia: int = Form(0),
-    MessageSid: str = Form(""),
-    MessageStatus: Optional[str] = Form(None),
+    From: str = Form(""),  # noqa: N803
+    Body: str = Form(""),  # noqa: N803
+    NumMedia: int = Form(0),  # noqa: N803
+    MessageSid: str = Form(""),  # noqa: N803
+    MessageStatus: str | None = Form(None),  # noqa: N803
     x_twilio_signature: str = Header("", alias="X-Twilio-Signature"),
 ) -> dict[str, str]:
     """Receive a Twilio WhatsApp callback.
@@ -105,16 +105,12 @@ async def twilio_whatsapp_webhook(
     form_data = await request.form()
     params = {k: str(v) for k, v in form_data.items()}
 
-    if not _validate_twilio_signature(
-        str(request.url), params, x_twilio_signature
-    ):
+    if not _validate_twilio_signature(str(request.url), params, x_twilio_signature):
         raise HTTPException(status_code=403, detail="Invalid Twilio signature")
 
     # Collect media URLs (Twilio sends MediaUrl0, MediaUrl1, ...)
     media_urls: list[str] = [
-        str(form_data[f"MediaUrl{i}"])
-        for i in range(NumMedia)
-        if f"MediaUrl{i}" in form_data
+        str(form_data[f"MediaUrl{i}"]) for i in range(NumMedia) if f"MediaUrl{i}" in form_data
     ]
 
     event_kind = "status" if MessageStatus else "message"

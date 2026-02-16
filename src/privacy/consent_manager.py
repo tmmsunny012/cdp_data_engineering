@@ -8,8 +8,8 @@ All mutations are logged to satisfy GDPR Art. 7 accountability requirements.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 CHANNELS: list[str] = ["email", "whatsapp", "push", "sms", "analytics", "profiling"]
 
 
-class ConsentSource(str, Enum):
+class ConsentSource(StrEnum):
     STUDENT_PORTAL = "student_portal"
     API = "api"
     IMPORT = "import"
@@ -28,19 +28,21 @@ class ConsentSource(str, Enum):
 
 class ChannelConsentEntry(BaseModel):
     """Consent state for a single communication channel."""
+
     channel: str
     consented: bool = False
     legal_basis: str = "consent"
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     terms_version: str = "v1.0"
 
 
 class ChannelConsent(BaseModel):
     """Aggregate consent state across all channels for a student."""
+
     student_id: str
     channels: dict[str, ChannelConsentEntry] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_modified: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_modified: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ConsentManager:
@@ -74,7 +76,7 @@ class ConsentManager:
         if channel not in CHANNELS:
             raise ValueError(f"Unknown channel: {channel}. Must be one of {CHANNELS}")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         existing = await self.get_consent(student_id)
         old_entry = existing.channels.get(channel)
         old_value = old_entry.consented if old_entry else None
@@ -110,7 +112,9 @@ class ConsentManager:
             "timestamp": now,
         }
         await self._audit_log.insert_one(audit_entry)
-        logger.info("Consent updated: student=%s channel=%s consented=%s", student_id, channel, consented)
+        logger.info(
+            "Consent updated: student=%s channel=%s consented=%s", student_id, channel, consented
+        )
 
     async def check_consent(self, student_id: str, channel: str) -> bool:
         """Quick boolean check -- suitable for pre-action gating."""
@@ -126,8 +130,6 @@ class ConsentManager:
         """Merge consent records using MOST RESTRICTIVE rule (GDPR-safe)."""
         primary = await self.get_consent(primary_id)
         secondary = await self.get_consent(secondary_id)
-        now = datetime.now(timezone.utc)
-
         for channel in CHANNELS:
             p_entry = primary.channels.get(channel)
             s_entry = secondary.channels.get(channel)
@@ -145,9 +147,7 @@ class ConsentManager:
 
     async def get_consent_audit_log(self, student_id: str) -> list[dict[str, Any]]:
         """Return the complete audit trail of consent changes for a student."""
-        cursor = self._audit_log.find(
-            {"student_id": student_id}
-        ).sort("timestamp", 1)
+        cursor = self._audit_log.find({"student_id": student_id}).sort("timestamp", 1)
         results: list[dict[str, Any]] = []
         async for doc in cursor:
             doc.pop("_id", None)

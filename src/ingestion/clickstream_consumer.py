@@ -11,8 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from aiokafka import AIOKafkaConsumer
 from pydantic import BaseModel, Field, ValidationError
@@ -33,22 +32,24 @@ CONSUMER_GROUP = os.getenv("CLICKSTREAM_CONSUMER_GROUP", "cdp-clickstream-cg")
 # Expected raw schema (for validation only)
 # ---------------------------------------------------------------------------
 
+
 class RawClickstreamEvent(BaseModel):
     """Minimal schema every raw clickstream JSON must satisfy."""
 
     session_id: str
     page_url: str
     event_type: str = "page_view"
-    user_agent: Optional[str] = None
+    user_agent: str | None = None
     utm_params: dict[str, str] = Field(default_factory=dict)
-    referrer: Optional[str] = None
-    timestamp: Optional[str] = None
-    user_id: Optional[str] = None
+    referrer: str | None = None
+    timestamp: str | None = None
+    user_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
 # Consumer
 # ---------------------------------------------------------------------------
+
 
 class ClickstreamConsumer:
     """Consume, validate, normalise, and re-publish clickstream events.
@@ -61,11 +62,11 @@ class ClickstreamConsumer:
     def __init__(
         self,
         producer: CDPKafkaProducer,
-        normalizer: Optional[FormatNormalizer] = None,
+        normalizer: FormatNormalizer | None = None,
     ) -> None:
         self._producer = producer
         self._normalizer = normalizer or FormatNormalizer()
-        self._consumer: Optional[AIOKafkaConsumer] = None
+        self._consumer: AIOKafkaConsumer | None = None
 
     async def start(self) -> None:
         """Create and start the underlying Kafka consumer."""
@@ -106,13 +107,15 @@ class ClickstreamConsumer:
                 )
 
                 # Enrich normalized_data with parsed clickstream fields.
-                customer_event.normalized_data.update({
-                    "session_id": validated.session_id,
-                    "page_url": validated.page_url,
-                    "event_type": validated.event_type,
-                    "utm_params": validated.utm_params,
-                    "referrer": validated.referrer,
-                })
+                customer_event.normalized_data.update(
+                    {
+                        "session_id": validated.session_id,
+                        "page_url": validated.page_url,
+                        "event_type": validated.event_type,
+                        "utm_params": validated.utm_params,
+                        "referrer": validated.referrer,
+                    }
+                )
                 customer_event.student_id = validated.user_id
 
                 await self._producer.send(

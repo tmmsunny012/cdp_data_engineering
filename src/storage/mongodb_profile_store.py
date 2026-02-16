@@ -3,15 +3,14 @@
 Uses motor's async MongoDB driver with connection pooling, optimistic
 locking via a version field, and indexed lookups for identity resolution.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from pymongo import ASCENDING, ReturnDocument
-from pymongo.errors import DuplicateKeyError
 
 from src.storage.models.customer_profile import CustomerProfile
 
@@ -40,7 +39,7 @@ class MongoProfileStore:
 
     # ── reads ─────────────────────────────────────────────────────────
 
-    async def get_profile(self, profile_id: str) -> Optional[CustomerProfile]:
+    async def get_profile(self, profile_id: str) -> CustomerProfile | None:
         """Fetch a single profile by its canonical ID."""
         doc = await self._col.find_one({"profile_id": profile_id})
         if doc is None:
@@ -50,23 +49,17 @@ class MongoProfileStore:
 
     async def find_by_identifier(
         self, identifier_type: str, identifier_value: str
-    ) -> Optional[CustomerProfile]:
+    ) -> CustomerProfile | None:
         """Identity resolution lookup — find profile by any known identifier."""
         doc = await self._col.find_one(
-            {
-                "identifiers": {
-                    "$elemMatch": {"type": identifier_type, "value": identifier_value}
-                }
-            }
+            {"identifiers": {"$elemMatch": {"type": identifier_type, "value": identifier_value}}}
         )
         if doc is None:
             return None
         doc.pop("_id", None)
         return CustomerProfile.model_validate(doc)
 
-    async def find_by_segment(
-        self, segment_name: str, limit: int = 100
-    ) -> list[CustomerProfile]:
+    async def find_by_segment(self, segment_name: str, limit: int = 100) -> list[CustomerProfile]:
         """Return profiles belonging to *segment_name*, capped by *limit*."""
         cursor = self._col.find({"segments": segment_name}).limit(limit)
         results: list[CustomerProfile] = []
@@ -85,7 +78,7 @@ class MongoProfileStore:
         is matched a concurrent writer already bumped the version and we
         raise ``OptimisticLockError``.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = profile.model_dump(mode="json")
         data["updated_at"] = now.isoformat()
 
@@ -100,9 +93,7 @@ class MongoProfileStore:
             return_document=ReturnDocument.AFTER,
         )
         if result is None:
-            raise OptimisticLockError(
-                f"Concurrent update on profile {profile.profile_id}"
-            )
+            raise OptimisticLockError(f"Concurrent update on profile {profile.profile_id}")
         logger.debug("Upserted profile %s (v%s)", profile.profile_id, result.get("_version"))
 
     async def delete_profile(self, profile_id: str) -> bool:
@@ -118,7 +109,9 @@ class MongoProfileStore:
     async def ensure_indexes(self) -> None:
         """Create secondary indexes for performant lookups."""
         await self._col.create_index("profile_id", unique=True)
-        await self._col.create_index([("identifiers.type", ASCENDING), ("identifiers.value", ASCENDING)])
+        await self._col.create_index(
+            [("identifiers.type", ASCENDING), ("identifiers.value", ASCENDING)]
+        )
         await self._col.create_index("personal_info.email")
         await self._col.create_index("personal_info.phone")
         await self._col.create_index("segments")

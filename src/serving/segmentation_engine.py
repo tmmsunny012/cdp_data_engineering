@@ -4,13 +4,14 @@ Evaluates customer profiles against configurable rules to compute segment
 membership.  Publishes segment-change events to Kafka so downstream systems
 (Salesforce, marketing automation) can react in near-real-time.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import operator
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from aiokafka import AIOKafkaProducer
 from pydantic import BaseModel, Field
@@ -34,10 +35,11 @@ _OPS: dict[str, Any] = {
 
 class SegmentRule(BaseModel):
     """A single predicate that can be chained with ``and_condition``."""
+
     field: str
     operator: str
     value: Any
-    and_condition: Optional[SegmentRule] = Field(default=None, alias="and")
+    and_condition: SegmentRule | None = Field(default=None, alias="and")
 
     model_config = {"populate_by_name": True}
 
@@ -52,7 +54,7 @@ class SegmentationEngine:
 
     def __init__(self, kafka_brokers: str = "localhost:9092") -> None:
         self._rules: list[SegmentDefinition] = []
-        self._producer: Optional[AIOKafkaProducer] = None
+        self._producer: AIOKafkaProducer | None = None
         self._kafka_brokers = kafka_brokers
         self._load_rules()
 
@@ -128,10 +130,7 @@ class SegmentationEngine:
         """Dot-notation field resolver against a profile object."""
         obj: Any = profile
         for part in field.split("."):
-            if isinstance(obj, dict):
-                obj = obj.get(part)
-            else:
-                obj = getattr(obj, part, None)
+            obj = obj.get(part) if isinstance(obj, dict) else getattr(obj, part, None)
             if obj is None:
                 return None
         return obj
@@ -192,7 +191,7 @@ class SegmentationEngine:
             "profile_id": profile_id,
             "segments_added": sorted(added),
             "segments_removed": sorted(removed),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         await self._producer.send_and_wait(SEGMENT_CHANGES_TOPIC, value=event)
         logger.info("Segment change published for %s: +%s -%s", profile_id, added, removed)
